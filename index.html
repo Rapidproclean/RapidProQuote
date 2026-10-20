@@ -1,0 +1,990 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Rapid Pro Quote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: two tabs (quote form / saved quotes), single-column field form for phones, sticky running total at the bottom, client quote as a full-screen sheet */
+:root{
+  --bg:#edf2f1; --surface:#ffffff; --ink:#13302c; --muted:#5a706c; --line:#d2dedb;
+  --accent:#0b6f62; --accent-ink:#ffffff; --soft:#dcece8; --warn:#9a5b00;
+  --ok:#1f7a3a; --ok-bg:#dff1e4; --sent:#1d5f9c; --sent-bg:#dde9f6; --lost:#8a3b32; --lost-bg:#f5e1de; --draft-bg:#e9eeed;
+  --display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1816; --surface:#132422; --ink:#e2eeeb; --muted:#93aba6; --line:#29423e;
+  --accent:#41c0a9; --accent-ink:#04211c; --soft:#18332f; --warn:#f0b35a;
+  --ok:#7fd69a; --ok-bg:#16351f; --sent:#8cbcf0; --sent-bg:#16293d; --lost:#f0a197; --lost-bg:#3a1c18; --draft-bg:#1d302d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1816; --surface:#132422; --ink:#e2eeeb; --muted:#93aba6; --line:#29423e;
+  --accent:#41c0a9; --accent-ink:#04211c; --soft:#18332f; --warn:#f0b35a;
+  --ok:#7fd69a; --ok-bg:#16351f; --sent:#8cbcf0; --sent-bg:#16293d; --lost:#f0a197; --lost-bg:#3a1c18; --draft-bg:#1d302d; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--body);font-variant-numeric:tabular-nums}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top-in{max-width:720px;margin:0 auto;padding:12px 16px 0;display:flex;flex-direction:column;gap:10px}
+.top-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{width:38px;height:38px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font:700 18px var(--display);letter-spacing:.5px}
+.brand b{display:block;font:700 19px/1.1 var(--display)}
+.brand small{color:var(--muted);font-size:13px}
+.role{font:600 12px var(--body);text-transform:uppercase;letter-spacing:.6px;border:1px solid var(--line);border-radius:20px;padding:3px 10px;color:var(--muted)}
+.tabs{display:flex;gap:4px}
+.tab{flex:1;background:none;border:0;border-bottom:3px solid transparent;padding:8px 4px 10px;font:700 17px var(--display);color:var(--muted);cursor:pointer}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab span{font:600 13px var(--body);background:var(--soft);border-radius:10px;padding:1px 7px;margin-left:4px}
+.wrap{max-width:720px;margin:0 auto;padding:16px 16px 140px;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+h2{font:700 20px/1.2 var(--display);margin:0;text-wrap:balance}
+h3{font:700 16px var(--display);margin:0}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.sec-head span,.hint{color:var(--muted);font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;min-width:0}
+input,select,textarea{font:16px var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%;min-width:0;text-transform:none;letter-spacing:0}
+input:disabled{opacity:.75}
+textarea{min-height:70px;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn{font:600 16px var(--body);border-radius:9px;padding:11px 16px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer;white-space:nowrap}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.small{padding:7px 12px;font-size:14px}
+.btn.wide{width:100%}
+.btn.danger{border-color:var(--warn);color:var(--warn);background:transparent}
+.btn:disabled{opacity:.55;cursor:default}
+.banner{background:var(--soft);border-radius:10px;padding:10px 14px;font-size:14px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.item{border-left:4px solid var(--accent)}
+.item-top{display:flex;gap:10px;align-items:flex-end}
+.item-top label{flex:1}
+.lw{display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;align-items:end}
+.lw span{padding-bottom:12px;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg label{flex:1;text-transform:none;letter-spacing:0;font-size:15px;color:var(--ink);position:relative}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;text-align:center;padding:9px 4px;cursor:pointer}
+.seg label+label span{border-left:1px solid var(--line)}
+.seg input:checked+span{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:-3px}
+.line-total{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px dashed var(--line);padding-top:10px;color:var(--muted);font-size:14px}
+.line-total b{font:700 22px var(--display);color:var(--ink)}
+.photos{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.thumb{position:relative;width:76px;height:76px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb button{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;cursor:pointer;font-size:14px;line-height:1}
+.thumb i{position:absolute;left:3px;bottom:2px;font:600 11px var(--body);font-style:normal;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:0 4px}
+.addphoto{width:76px;height:76px;border:1.5px dashed var(--line);border-radius:8px;display:grid;place-items:center;color:var(--accent);font-size:13px;font-weight:600;text-transform:none;letter-spacing:0;cursor:pointer;text-align:center;line-height:1.2}
+.addphoto input{display:none}
+.plist{display:flex;flex-direction:column;gap:10px}
+.prow{display:grid;grid-template-columns:76px 1fr;gap:12px;align-items:start}
+.pinfo{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pest{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pest input{width:110px;flex:none;padding:8px 10px}
+.pest span{font-size:14px;color:var(--muted)}
+.pinfo small{color:var(--muted);font-size:13px;line-height:1.35}
+.conf{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:20px;background:var(--draft-bg);color:var(--muted)}
+.conf.high{background:var(--ok-bg);color:var(--ok)}
+.conf.low{background:var(--lost-bg);color:var(--lost)}
+.busy{color:var(--accent);font-size:14px;font-weight:600}
+.photo-hint{font-size:14px;color:var(--muted);margin:0 0 8px}
+.line-total.unpriced b{color:var(--muted)}
+.upload{flex-direction:row;justify-content:center;text-transform:none;letter-spacing:0;font:600 16px var(--body);color:var(--accent);text-align:center}
+.drawing{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:12px;background:var(--bg)}
+.dhead{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dhead b{font:700 17px var(--display);min-width:0;overflow-wrap:anywhere}
+.dpage{display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:start}
+.dthumb{padding:0;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:zoom-in;display:block;width:100%}
+.dthumb img{display:block;width:100%;height:auto;border-radius:6px}
+.dinfo{display:flex;flex-direction:column;gap:8px;min-width:0}
+.alist{display:flex;flex-direction:column;gap:8px}
+.arow{display:grid;grid-template-columns:1fr 92px;gap:6px;padding-bottom:8px;border-bottom:1px dashed var(--line)}
+.arow select{grid-column:1/-1}
+.arow small{grid-column:1/-1;color:var(--muted);font-size:12px}
+.arow input,.arow select{padding:8px 10px;background:var(--surface)}
+.dsum{font-size:14px;font-weight:600}
+.dsum.warn{color:var(--warn)}
+.from-draw{font-size:13px;font-weight:600;color:var(--accent)}
+.viewer img{display:block;max-width:100%;margin:0 auto;background:#fff;border-radius:6px}
+@media (max-width:520px){.dpage{grid-template-columns:1fr}.dthumb img{max-height:240px;object-fit:contain}}
+.zone{background:var(--soft);border-radius:8px;padding:10px 12px;font-size:15px}
+.row{display:grid;grid-template-columns:1fr 120px auto;gap:8px;align-items:center}
+.x{background:none;border:1px solid var(--line);border-radius:8px;width:40px;height:44px;color:var(--muted);cursor:pointer;font-size:18px}
+.check{flex-direction:row;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:16px;color:var(--ink);font-weight:500}
+.check input{width:22px;height:22px}
+table.sum{width:100%;border-collapse:collapse;font-size:15px}
+.sum td{padding:7px 0;border-bottom:1px solid var(--line)}
+.sum td:last-child{text-align:right;white-space:nowrap}
+.sum .sub td{color:var(--muted);font-size:14px}
+.sum .grand td{border:0;font:700 22px var(--display);padding-top:12px}
+details.card summary{font:700 20px var(--display);cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:10px}
+details.card summary::after{content:"+";color:var(--accent)}
+details[open].card summary::after{content:"−"}
+.lock{font:600 13px var(--body);color:var(--muted)}
+.rates{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.rates label{flex-direction:row;align-items:center;justify-content:space-between;gap:8px;text-transform:none;letter-spacing:0;font-size:15px;color:var(--ink);font-weight:500}
+.rates input{width:96px;flex:none}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
+.bar-in{max-width:720px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.bar small{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+.bar strong{font:700 24px/1 var(--display)}
+.bar-btns{display:flex;gap:8px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.pill{display:inline-block;font:600 12px var(--body);text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:20px;background:var(--draft-bg);color:var(--muted)}
+.pill.Sent{background:var(--sent-bg);color:var(--sent)}
+.pill.Accepted{background:var(--ok-bg);color:var(--ok)}
+.pill.Lost{background:var(--lost-bg);color:var(--lost)}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:20px;padding:6px 12px;font:500 14px var(--body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.stat small{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.stat b{font:700 20px var(--display)}
+.qlist{display:flex;flex-direction:column;gap:8px}
+.qrow{display:grid;grid-template-columns:1fr auto;gap:4px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;text-align:left;width:100%;font:inherit;color:inherit;cursor:pointer}
+.qrow:hover{border-color:var(--accent)}
+.qrow b{font:700 17px var(--display);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qrow .amt{font:700 17px var(--display);text-align:right}
+.qrow .meta{color:var(--muted);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qrow .pillcell{text-align:right}
+.qrow.current{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.empty{text-align:center;color:var(--muted);padding:28px 12px;border:1.5px dashed var(--line);border-radius:12px}
+/* client quote sheet: always paper white, in both themes */
+.sheet{position:fixed;inset:0;z-index:10;background:var(--bg);overflow-y:auto;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.sheet-bar{max-width:760px;margin:0 auto 12px;display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap}
+.paper{max-width:760px;margin:0 auto;background:#ffffff;color:#14231f;border-radius:6px;padding:28px 22px;box-shadow:0 2px 14px rgba(0,0,0,.12)}
+.p-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:3px solid #0b6f62;padding-bottom:14px}
+.p-head h1{font:700 30px/1 var(--display);margin:0;color:#0b6f62}
+.p-head .meta{font-size:14px;text-align:right}
+.p-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:18px 0}
+.p-cols h4,.paper h4{font:700 13px var(--body);text-transform:uppercase;letter-spacing:.7px;color:#56706a;margin:0 0 4px}
+.p-cols p{margin:0;white-space:pre-line}
+.tbl-wrap{overflow-x:auto}
+.ptable{width:100%;border-collapse:collapse;font-size:15px;min-width:420px}
+.ptable th{text-align:left;font:700 13px var(--body);text-transform:uppercase;letter-spacing:.6px;color:#56706a;border-bottom:2px solid #c9d8d4;padding:6px 4px}
+.ptable td{padding:8px 4px;border-bottom:1px solid #e1e9e7;vertical-align:top}
+.ptable td:last-child,.ptable th:last-child{text-align:right;white-space:nowrap}
+.ptable small{color:#56706a}
+.ptot{margin-left:auto;max-width:320px;margin-top:12px;font-size:15px}
+.ptot div{display:flex;justify-content:space-between;padding:4px 0}
+.ptot .g{border-top:2px solid #14231f;margin-top:6px;padding-top:8px;font:700 22px var(--display)}
+.pphotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:8px}
+.pphotos figure{margin:0}
+.pphotos img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px;border:1px solid #d6e1de}
+.pphotos figcaption{font-size:12px;color:#56706a}
+.paper section{margin-top:22px}
+.paper ul{margin:4px 0;padding-left:18px;font-size:14px}
+.sign{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;margin-top:10px}
+.sign div{border-bottom:1px solid #14231f;height:42px;font-size:12px;color:#56706a;display:flex;align-items:flex-end}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:20px;font-size:14px;z-index:20;max-width:calc(100% - 32px);text-align:center}
+@media (max-width:420px){.bar strong{font-size:20px}.bar .btn{padding:10px 12px;font-size:15px}.stat b{font-size:17px}}
+@media (prefers-reduced-motion:no-preference){.btn{transition:filter .15s}.btn:hover{filter:brightness(1.08)}}
+</style>
+
+<header class="top"><div class="top-in">
+  <div class="top-row">
+    <div class="brand"><span class="mark">RP</span><div><b>Rapid Pro Clean</b><small id="qnoLabel">Site quote · Perth</small></div></div>
+    <span class="role" id="roleChip">Sales</span>
+  </div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-quote" aria-selected="true" data-act="tab" data-tab="quote">Quote</button>
+    <button class="tab" role="tab" id="tab-list" aria-selected="false" data-act="tab" data-tab="list">Saved quotes<span id="listCount">0</span></button>
+  </div>
+</div></header>
+
+<main class="wrap" id="view-quote">
+  <div class="banner" id="exampleBanner" hidden>
+    <span>Example quote loaded so you can see how it works. It isn't saved.</span>
+    <button class="btn small ghost" data-act="new-blank">Start a blank quote</button>
+  </div>
+  <div class="banner" id="ratesBanner" hidden>
+    <span>This quote is priced with the rates saved when it was made. Your rate card has changed since.</span>
+    <button class="btn small ghost" data-act="reprice">Use current rates</button>
+  </div>
+
+  <section class="card">
+    <div class="sec-head"><h2>Client and site</h2></div>
+    <div class="grid">
+      <label>Client name<input id="f-client" data-k="q.client" autocomplete="off"></label>
+      <label>Phone<input id="f-phone" data-k="q.phone" inputmode="tel"></label>
+      <label>Email<input id="f-email" data-k="q.email" inputmode="email"></label>
+      <label>Property type<select id="f-ptype" data-k="q.ptype">
+        <option>Residential house</option><option>Unit / apartment</option><option>Office / commercial</option>
+        <option>Strata / common areas</option><option>New build / construction</option><option>Warehouse / industrial</option><option>Other</option></select></label>
+    </div>
+    <label>Site address<input id="f-site" data-k="q.site"></label>
+    <div class="grid">
+      <label>Salesperson<input id="f-sales" data-k="q.sales"></label>
+      <label>Quote date<input id="f-date" type="date" data-k="q.date"></label>
+      <label>Valid for (days)<input id="f-valid" type="number" inputmode="numeric" data-k="q.valid"></label>
+      <label>Status<select id="f-status" data-k="status"><option>Draft</option><option>Sent</option><option>Accepted</option><option>Lost</option></select></label>
+    </div>
+    <label>Access and site notes (crew only)<textarea id="f-access" data-k="q.access" placeholder="Parking, gate codes, power and water on site, work hours…"></textarea></label>
+  </section>
+
+  <section class="card" id="drawCard">
+    <div class="sec-head"><h2>Building drawings (builders clean)</h2><span id="drawCount"></span></div>
+    <p class="hint" style="margin:0" id="drawHint"></p>
+    <div id="drawings" style="display:flex;flex-direction:column;gap:14px"></div>
+    <label class="btn ghost wide upload">+ Add drawing (PDF or image)<input type="file" accept="application/pdf,.pdf,image/*" multiple data-act="drawing" hidden></label>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <div class="sec-head"><h2>Services</h2><span id="itemCount"></span></div>
+    <div id="items" style="display:flex;flex-direction:column;gap:12px"></div>
+    <button class="btn ghost wide" data-act="add-item">+ Add service</button>
+  </section>
+
+  <section class="card">
+    <h2>Travel</h2>
+    <div class="grid">
+      <label>Distance from base, one way (km)<input id="f-km" type="number" inputmode="decimal" data-k="travel.km"></label>
+      <label>Parking (CBD, paid bays)<input id="f-park" type="number" inputmode="decimal" data-k="travel.parking"></label>
+    </div>
+    <div class="zone" id="zoneInfo"></div>
+  </section>
+
+  <section class="card">
+    <h2>Materials and equipment</h2>
+    <label>Chemicals and consumables (% of job cost)<input id="f-matpct" type="number" inputmode="decimal" data-k="mat.pct"></label>
+    <div class="hint">Extra items: sealer, strip chemical, pads, equipment hire (EWP, scrubber), tip fees.</div>
+    <div id="extras" style="display:flex;flex-direction:column;gap:8px"></div>
+    <button class="btn small ghost" data-act="add-extra" style="align-self:flex-start">+ Add item</button>
+  </section>
+
+  <section class="card">
+    <h2>Adjustments</h2>
+    <label class="check"><input id="f-after" type="checkbox" data-k="adj.after"> After-hours or weekend work <span class="hint" id="afterPctLabel"></span></label>
+    <label>Discount (%)<input id="f-disc" type="number" inputmode="decimal" data-k="adj.disc"></label>
+    <div class="hint" id="discHint"></div>
+    <label>Notes shown to client<textarea id="f-cnotes" data-k="adj.clientNotes" placeholder="e.g. Price includes inside and outside of all windows, tracks and screens."></textarea></label>
+  </section>
+
+  <section class="card">
+    <h2>Price breakdown</h2>
+    <table class="sum" id="sumTable"></table>
+  </section>
+
+  <details class="card" id="ratesBox">
+    <summary>Rate card <span class="lock" id="lockLabel"></span></summary>
+    <p class="hint" style="margin:0" id="ratesIntro"></p>
+    <h3>Cleaning, per m² ($ ex GST)</h3>
+    <div class="rates" id="ratesGrid"></div>
+    <h3>Strip and seal, per m² ($ ex GST)</h3>
+    <div class="rates" id="ratesGridSS"></div>
+    <h3>Per item ($ ex GST)</h3>
+    <div class="rates" id="ratesGridItem"></div>
+    <h3>Per job</h3>
+    <p class="hint" style="margin:0">Gardening and rubbish removal are priced as a whole job. The salesperson enters the job price on each quote.</p>
+    <h3>Condition multipliers</h3>
+    <div class="rates">
+      <label>Light<input id="s-cl" class="rate-in" type="number" step="0.05" data-k="R.cond.l"></label>
+      <label>Medium<input id="s-cm" class="rate-in" type="number" step="0.05" data-k="R.cond.m"></label>
+      <label>Heavy<input id="s-ch" class="rate-in" type="number" step="0.05" data-k="R.cond.h"></label>
+    </div>
+    <h3>Travel zones (one-way km from base)</h3>
+    <div class="rates">
+      <label>Zone 1 up to km<input id="s-z0t" class="rate-in" type="number" data-k="R.zones.0.to"></label>
+      <label>Zone 1 fee $<input id="s-z0f" class="rate-in" type="number" data-k="R.zones.0.fee"></label>
+      <label>Zone 2 up to km<input id="s-z1t" class="rate-in" type="number" data-k="R.zones.1.to"></label>
+      <label>Zone 2 fee $<input id="s-z1f" class="rate-in" type="number" data-k="R.zones.1.fee"></label>
+      <label>Zone 3 up to km<input id="s-z2t" class="rate-in" type="number" data-k="R.zones.2.to"></label>
+      <label>Zone 3 fee $<input id="s-z2f" class="rate-in" type="number" data-k="R.zones.2.fee"></label>
+      <label>Beyond zone 3, $ per km (return)<input id="s-perkm" class="rate-in" type="number" step="0.05" data-k="R.perKm"></label>
+    </div>
+    <h3>Other</h3>
+    <div class="rates">
+      <label>After-hours surcharge %<input id="s-after" class="rate-in" type="number" data-k="R.afterPct"></label>
+      <label>Minimum call-out, $ ex GST<input id="s-min" class="rate-in" type="number" data-k="R.minCharge"></label>
+      <label>Max discount for sales staff %<input id="s-maxdisc" class="rate-in" type="number" data-k="R.maxDisc"></label>
+    </div>
+  </details>
+
+  <div class="actions">
+    <button class="btn danger small" data-act="new-quote" id="newBtn">New quote</button>
+    <span class="hint" id="saveNote"></span>
+  </div>
+</main>
+
+<main class="wrap" id="view-list" hidden>
+  <div class="stats" id="stats"></div>
+  <input id="searchBox" type="search" placeholder="Search client, site or quote number" aria-label="Search quotes">
+  <div class="filters" id="filters"></div>
+  <div class="qlist" id="qlist"></div>
+</main>
+
+<div class="bar" id="bar"><div class="bar-in">
+  <div><small>Total inc GST</small><strong id="barTotal">$0.00</strong></div>
+  <div class="bar-btns">
+    <button class="btn ghost" data-act="save" id="saveBtn">Save</button>
+    <button class="btn" data-act="preview">Client quote</button>
+  </div>
+</div></div>
+
+<div class="sheet viewer" id="viewer" hidden>
+  <div class="sheet-bar"><button class="btn ghost small" data-act="close-viewer">← Back to quote</button></div>
+  <img id="viewerImg" alt="Drawing page">
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-bar">
+    <button class="btn ghost small" data-act="close">← Back to editing</button>
+    <button class="btn small" data-act="copy">Copy quote as text</button>
+  </div>
+  <div class="paper" id="paper"></div>
+  <p class="hint" style="max-width:760px;margin:12px auto 0;text-align:center">Show this screen to the client, take a screenshot, or copy the text into an email or SMS.</p>
+</div>
+
+<script>
+/* u: m2 = area x rate, item = quantity x rate, job = fixed job price entered on the quote. sec groups the rate card and the service picker. */
+const SVC=[
+  {k:"General cleaning",u:"m2",sec:"m2",d:3.5,m:"the floor area of the rooms shown"},
+  {k:"Builders clean",label:"Builders clean (incl. windows)",u:"m2",sec:"m2",d:5,m:"the floor area of the rooms shown (builders cleans are priced by floor area)"},
+  {k:"High pressure cleaning",u:"m2",sec:"m2",d:5,m:"the hard outdoor surface to be pressure cleaned (driveway, paving, patio, path or wall)"},
+  {k:"Window cleaning",label:"Internal window cleaning (m² of glass)",u:"m2",sec:"m2",d:6,m:"the area of window glass, one side only"},
+  {k:"External window cleaning",label:"External window cleaning (m² of glass)",u:"m2",sec:"m2",d:8,m:"the area of window glass, one side only"},
+  {k:"Carpet cleaning",label:"Carpet cleaning (steam)",u:"m2",sec:"m2",d:3.5,m:"the carpeted floor area only"},
+  {k:"Bonnet pad carpet cleaning",u:"m2",sec:"m2",d:2.75,m:"the carpeted floor area only"},
+  {k:"Tile and grout cleaning",u:"m2",sec:"m2",d:4,m:"the tiled area (floor and any tiled walls shown)"},
+  {k:"Deep machine scrub vinyl flooring",u:"m2",sec:"m2",d:3.5,m:"the vinyl floor area only"},
+  {k:"Vinyl strip and seal",u:"m2",sec:"ss",d:15,m:"the vinyl floor area only"},
+  {k:"Re-seal only (no strip)",u:"m2",sec:"ss",d:8,m:"the vinyl floor area only"},
+  {k:"Upholstery cleaning",label:"Upholstery cleaning (per seat)",u:"item",sec:"item",d:35,qty:"Number of seats",one:"seat",many:"seats"},
+  {k:"Gardening",label:"Gardening (per job)",u:"job",sec:"job"},
+  {k:"Rubbish removal",label:"Rubbish removal (per job)",u:"job",sec:"job"}
+];
+const SERVICES=SVC.map(s=>s.k);
+const SECS=[["m2","Cleaning (per m²)"],["ss","Strip and seal (per m²)"],["item","Per item"],["job","Per job"]];
+const RATE_VER=2;
+const svcOf=k=>SVC.find(s=>s.k===k)||{k,u:"m2",sec:"m2"};
+const svcLabel=k=>svcOf(k).label||k;
+const STATUSES=["Draft","Sent","Accepted","Lost"];
+const COND={l:"Light",m:"Medium",h:"Heavy"};
+const KEY="rapidpro-quote-v1";
+const uid=()=>Math.random().toString(36).slice(2,9);
+const clone=o=>JSON.parse(JSON.stringify(o));
+const pad=x=>String(x).padStart(2,"0");
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
+const qnum=()=>{const d=new Date();return "RP-"+String(d.getFullYear()).slice(2)+pad(d.getMonth()+1)+pad(d.getDate())+"-"+pad(d.getHours())+pad(d.getMinutes())};
+
+function defaultRates(){
+  const rates={};SVC.forEach(s=>{if(s.u!=="job")rates[s.k]=s.d});
+  return {ver:RATE_VER,rates,cond:{l:1,m:1.25,h:1.5},zones:[{to:15,fee:0},{to:30,fee:25},{to:50,fee:45}],perKm:1.2,afterPct:20,minCharge:180,maxDisc:10};
+}
+/* One-off update of an older saved rate card to the Perth 2026 rates. Only used for the live rate card, never for saved quotes. */
+function upgradeRates(raw){
+  if(!raw||(raw.ver||1)>=RATE_VER)return false;
+  raw.rates=raw.rates||{};SVC.forEach(s=>{if(s.u!=="job")raw.rates[s.k]=s.d;else delete raw.rates[s.k]});
+  if(!n(raw.minCharge))raw.minCharge=180;
+  raw.ver=RATE_VER;return true;
+}
+function normRates(r){const d=defaultRates();r=Object.assign(d,r||{});r.rates=Object.assign(defaultRates().rates,r.rates||{});r.cond=Object.assign(defaultRates().cond,r.cond||{});
+  if(!Array.isArray(r.zones)||r.zones.length<3)r.zones=defaultRates().zones;return r}
+
+let RATES=defaultRates();
+let ROLE={owner:false,id:null,dbOk:false};
+let db=null,user=null;
+let QUOTES=[];
+let S;
+
+function blankQuote(){
+  return {qid:null,example:false,ratesLive:true,dirty:false,status:"Draft",createdBy:null,createdAt:null,
+    q:{no:qnum(),date:today(),valid:30,client:"",phone:"",email:"",site:"",ptype:"Residential house",sales:"",access:""},
+    items:[{id:uid(),svc:"General cleaning",area:"",L:"",W:"",cond:"m",price:"",notes:"",photos:[]}],
+    drawings:[],travel:{km:"",parking:""},mat:{pct:8,extras:[]},adj:{after:false,disc:"",clientNotes:""},set:clone(RATES),removedPhotos:[]};
+}
+function exampleQuote(){
+  const s=blankQuote();s.example=true;
+  Object.assign(s.q,{client:"Example: Jane Citizen",phone:"0400 000 000",site:"12 Example St, Baldivis WA",ptype:"New build / construction",sales:"Sam",access:"Builder's site. Power and water on. Gate open 7am–4pm."});
+  s.items=[{id:uid(),svc:"Builders clean",area:180,L:"",W:"",cond:"h",price:"",notes:"Final clean. Paint and cement splatter on tiles. Includes inside of all windows, tracks and stickers.",photos:[]},
+           {id:uid(),svc:"External window cleaning",area:42,L:"",W:"",cond:"h",price:"",notes:"Outside of all windows and frames. Single storey.",photos:[]},
+           {id:uid(),svc:"High pressure cleaning",area:60,L:"",W:"",cond:"m",price:"",notes:"Driveway, exposed aggregate.",photos:[]},
+           {id:uid(),svc:"Rubbish removal",area:"",L:"",W:"",cond:"m",price:180,notes:"Builder's offcuts and packaging, one trailer load.",photos:[]}];
+  s.travel={km:38,parking:0};
+  s.mat={pct:8,extras:[]};
+  s.adj.clientNotes="Builders clean includes removal of paint and cement residue from floors, internal window cleaning, stickers from glass, and a full dust-down of all surfaces.";
+  return s;
+}
+function normQuote(s){
+  const b=blankQuote();s=Object.assign(b,s||{});
+  s.q=Object.assign(blankQuote().q,s.q||{});s.set=normRates(s.set);
+  s.items=(s.items||[]).map(it=>Object.assign({id:uid(),svc:"General cleaning",area:"",L:"",W:"",cond:"m",price:"",notes:""},it,{photos:(it.photos||[]).map(p=>typeof p==="string"?{pid:"p"+uid(),data:p,saved:false}:p)}));
+  s.mat=Object.assign({pct:8,extras:[]},s.mat||{});s.adj=Object.assign({after:false,disc:"",clientNotes:""},s.adj||{});
+  s.items.forEach(it=>it.photos.forEach(p=>{if(p.estState==="measuring"||p.estState==="queued")p.estState=""}));
+  s.drawings=(s.drawings||[]).map(d=>Object.assign({id:"d"+uid(),name:"Drawing",err:""},d,{loading:false,pages:(d.pages||[]).map(pg=>Object.assign({areas:[],total:null,note:"",data:""},pg,{state:pg.state==="done"?"done":(pg.state==="error"?"error":"")}))}));
+  s.removedPhotos=s.removedPhotos||[];if(!STATUSES.includes(s.status))s.status="Draft";
+  return s;
+}
+try{const raw=localStorage.getItem(KEY);S=raw?normQuote(JSON.parse(raw)):null}catch(e){S=null}
+if(!S)S=exampleQuote();
+if(S.ratesLive)S.set=clone(RATES);
+
+/* ---------- local draft (this phone) ---------- */
+let saveTimer;
+function saveLocal(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{
+  try{localStorage.setItem(KEY,JSON.stringify(S))}
+  catch(e){try{const lite=clone(S);lite.items.forEach(i=>i.photos=i.photos.filter(p=>p.saved).map(p=>Object.assign({},p,{data:""})));lite.drawings.forEach(d=>d.pages.forEach(pg=>{if(pg.saved)pg.data="";else pg.data=""}));localStorage.setItem(KEY,JSON.stringify(lite))}catch(e2){}}
+},300)}
+function touch(){S.dirty=true;S.example=S.example&&true;saveLocal();updateSaveNote()}
+
+const n=v=>{const x=parseFloat(v);return isFinite(x)?x:0};
+const money=v=>new Intl.NumberFormat("en-AU",{style:"currency",currency:"AUD"}).format(v||0);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function root(p){return p.startsWith("R.")?[RATES,p.slice(2)]:[S,p]}
+function getPath(p){const [o,k]=root(p);return k.split(".").reduce((a,x)=>a==null?a:a[x],o)}
+function setPath(p,v){const [o,k]=root(p);const ks=k.split(".");let t=o;ks.slice(0,-1).forEach(x=>t=t[x]);t[ks[ks.length-1]]=v}
+
+/* ---------- pricing ---------- */
+/* A service is priced only when it has a size: m² typed in, or m² measured from its photos (or a job price / seat count). Anything else stays blank. */
+function sumEst(it){return +it.photos.reduce((a,p)=>a+(n(p.est)>0?n(p.est):0),0).toFixed(1)}
+function usesPhotoArea(it){return svcOf(it.svc).u==="m2"&&!(n(it.area)>0)&&sumEst(it)>0}
+function areaOf(it){return usesPhotoArea(it)?sumEst(it):n(it.area)}
+function isPriced(it){const s=svcOf(it.svc);return s.u==="job"?n(it.price)>0:areaOf(it)>0}
+function isMeasuring(it){return it.photos.some(p=>p.estState==="measuring"||p.estState==="queued")}
+function lineCost(it){if(!isPriced(it))return 0;if(svcOf(it.svc).u==="job")return n(it.price);return areaOf(it)*n(S.set.rates[it.svc])*n(S.set.cond[it.cond]||1)}
+function qtyText(it){const s=svcOf(it.svc),q=areaOf(it);
+  if(s.u==="job")return "Fixed job price";
+  if(s.u==="item")return `${q} ${q===1?s.one:s.many}`;
+  return usesPhotoArea(it)?`approx. ${q} m² (measured from photos)`:`${q} m²`}
+function travelCalc(){
+  const km=n(S.travel.km),z=S.set.zones;let fee=0,label="";
+  if(!km){label="Enter distance to work out travel."}
+  else{let f=-1;for(let i=0;i<z.length;i++){if(km<=n(z[i].to)){f=i;break}}
+    if(f>=0){fee=n(z[f].fee);label=`Zone ${f+1} (up to ${n(z[f].to)} km): ${fee?money(fee):"no travel charge"}`}
+    else{fee=km*2*n(S.set.perKm);label=`Beyond zone 3: ${km} km × 2 × ${money(n(S.set.perKm))}/km = ${money(fee)}`}}
+  return {fee,label,parking:n(S.travel.parking)};
+}
+function calc(){
+  if(!S.items.some(isPriced))return {empty:true,job:0,after:0,labour:0,t:travelCalc(),travel:0,chem:0,extras:0,materials:0,sub:0,minAdj:0,disc:0,ex:0,gst:0,total:0};
+  const job=S.items.reduce((a,it)=>a+lineCost(it),0);
+  const after=S.adj.after?job*n(S.set.afterPct)/100:0;
+  const labour=job+after;
+  const t=travelCalc();const travel=t.fee+t.parking;
+  const chem=labour*n(S.mat.pct)/100;
+  const extras=S.mat.extras.reduce((a,e)=>a+n(e.amt),0);
+  const materials=chem+extras;
+  const sub=labour+travel+materials;
+  const minAdj=Math.max(0,n(S.set.minCharge)-sub);
+  const disc=(sub+minAdj)*n(S.adj.disc)/100;
+  const ex=sub+minAdj-disc;const gst=ex*0.1;
+  return {job,after,labour,t,travel,chem,extras,materials,sub,minAdj,disc,ex,gst,total:ex+gst};
+}
+
+/* ---------- rendering: quote form ---------- */
+function itemFields(it){
+  const sv=svcOf(it.svc);
+  if(it.src==="drawing")return `<div class="from-draw">From the building drawing: ${n(it.area)} m²</div>
+    <div class="hint">Change rooms, m² and services in Building drawings above.</div>
+    <div><div class="hint" style="margin-bottom:4px">Condition</div>
+      <div class="seg" role="radiogroup">${Object.entries(COND).map(([k,v])=>`<label><input type="radio" name="c-${it.id}" value="${k}" data-f="cond"${it.cond===k?" checked":""}><span>${v} ×${n(S.set.cond[k])}</span></label>`).join("")}</div></div>`;
+  if(sv.u==="job")return `<label>Job price, ex GST ($)<input id="i-${it.id}-price" type="number" inputmode="decimal" data-f="price" value="${esc(it.price)}" placeholder="0"></label>
+    <div class="hint">Price the whole job. GST is added at the end of the quote.</div>`;
+  const cond=`<div><div class="hint" style="margin-bottom:4px">Condition</div>
+      <div class="seg" role="radiogroup">${Object.entries(COND).map(([k,v])=>`<label><input type="radio" name="c-${it.id}" value="${k}" data-f="cond"${it.cond===k?" checked":""}><span>${v} ×${n(S.set.cond[k])}</span></label>`).join("")}</div></div>`;
+  if(sv.u==="item")return `<label>${sv.qty}<input id="i-${it.id}-area" type="number" inputmode="numeric" data-f="area" value="${esc(it.area)}" placeholder="0"></label>${cond}`;
+  const glass=/window/i.test(it.svc)?" of glass":"";
+  return `<label>Measured area (m²${glass})<input id="i-${it.id}-area" type="number" inputmode="decimal" data-f="area" value="${esc(it.area)}" placeholder="Leave blank to use photos"></label>
+    <div class="hint">Type the m² if you measured it. Leave it blank and add photos below to have each photo measured.</div>
+    <div class="lw">
+      <label>Length (m)<input id="i-${it.id}-L" type="number" inputmode="decimal" data-f="L" value="${esc(it.L)}"></label><span>×</span>
+      <label>Width (m)<input id="i-${it.id}-W" type="number" inputmode="decimal" data-f="W" value="${esc(it.W)}"></label>
+      <button class="btn small ghost" data-act="lw">Add to area</button>
+    </div>${cond}`;
+}
+function photoHtml(it){
+  const m2=svcOf(it.svc).u==="m2";
+  const thumb=(p,pi)=>`<div class="thumb"><img src="${p.data}" alt="Site photo ${pi+1} for ${esc(svcLabel(it.svc))}"><i>${pi+1}</i><button data-act="del-photo" data-pi="${pi}" aria-label="Remove photo">×</button></div>`;
+  const add=`<label class="addphoto">+ Photo<input type="file" accept="image/*" multiple data-act="photo"></label>`;
+  if(!m2)return `<div class="hint" style="margin-bottom:6px">Photos</div><div class="photos">${it.photos.map((p,pi)=>p.data?thumb(p,pi):"").join("")}${add}</div>`;
+  const hint=canMeasure
+    ?"Take one photo per area. Each photo is measured, and the m² from all photos are added together and priced for this service. Check each m² and correct it if it looks wrong."
+    :(measureChecked?"Photo measuring isn't available in this view. Type the m² above, or use length × width.":"Checking whether photo measuring is available…");
+  const rows=it.photos.map((p,pi)=>{if(!p.data)return "";
+    let status="";
+    if(p.estState==="queued")status=`<span class="busy">Waiting to measure…</span>`;
+    else if(p.estState==="measuring")status=`<span class="busy">Measuring photo…</span>`;
+    else if(p.estState==="error")status=`<small>${esc(p.estNote||"Couldn't measure this photo.")}</small>`;
+    else if(p.estNote)status=`<small>${esc(p.estNote)}${n(p.low)>0&&n(p.high)>0?` Likely range ${n(p.low)}–${n(p.high)} m².`:""}</small>`;
+    const conf=p.conf&&p.estState==="done"?`<span class="conf ${esc(p.conf)}">${esc(p.conf)} confidence</span>`:p.estState==="edited"?`<span class="conf">Corrected by hand</span>`:"";
+    const again=canMeasure&&p.estState!=="measuring"&&p.estState!=="queued"?`<button class="btn small ghost" data-act="measure" data-pi="${pi}">${p.estState==="done"||p.estState==="edited"?"Measure again":"Measure"}</button>`:"";
+    return `<div class="prow">${thumb(p,pi)}<div class="pinfo">
+      <div class="pest"><input id="pe-${esc(p.pid)}" type="number" inputmode="decimal" data-pest="${pi}" value="${esc(p.est)}" placeholder="m²" aria-label="Area in photo ${pi+1}, m²"><span>m²</span>${conf}</div>
+      ${status}${again?`<div>${again}</div>`:""}</div></div>`}).join("");
+  const k=it.photos.filter(p=>p.data).length;
+  const tot=k?`<div class="dsum">Total from ${k} ${k===1?"photo":"photos"}: ${sumEst(it)} m²${n(it.area)>0?` (not used, because the measured area typed above is used instead)`:""}</div>`:"";
+  return `<div class="hint" style="margin-bottom:6px">Photos of the area</div><p class="photo-hint">${hint}</p><div class="plist">${rows}${tot}<div>${add}</div></div>`;
+}
+function refreshPhotos(it){const box=document.getElementById("ph-"+it.id);if(!box||box.contains(document.activeElement))return;box.innerHTML=photoHtml(it)}
+function renderItems(){
+  const box=document.getElementById("items");
+  box.innerHTML=S.items.map((it,idx)=>`
+  <div class="card item" data-item="${it.id}">
+    <div class="item-top">
+      <label>Service ${idx+1}<select id="i-${it.id}-svc" data-f="svc"${it.src==="drawing"?" disabled":""}>${SECS.map(([sec,name])=>`<optgroup label="${name}">${SVC.filter(s=>s.sec===sec).map(s=>`<option value="${esc(s.k)}"${s.k===it.svc?" selected":""}>${esc(s.label||s.k)}</option>`).join("")}</optgroup>`).join("")}</select></label>
+      <button class="x" data-act="del-item" aria-label="Remove service" title="Remove service">×</button>
+    </div>
+    ${itemFields(it)}
+    <label>Notes (shown to client)<textarea id="i-${it.id}-notes" data-f="notes"${it.src==="drawing"?" readonly":""} placeholder="What's included, stains, access, storeys…">${esc(it.notes)}</textarea></label>
+    <div id="ph-${it.id}">${photoHtml(it)}</div>
+    <div class="line-total" id="lt-w-${it.id}"><span id="lt-d-${it.id}"></span><b id="lt-${it.id}"></b></div>
+  </div>`).join("");
+  document.getElementById("itemCount").textContent=S.items.length+(S.items.length===1?" service":" services");
+}
+function renderExtras(){
+  document.getElementById("extras").innerHTML=S.mat.extras.map(e=>`
+  <div class="row" data-extra="${e.id}">
+    <input id="e-${e.id}-name" data-ef="name" value="${esc(e.name)}" placeholder="Item" aria-label="Item name">
+    <input id="e-${e.id}-amt" type="number" inputmode="decimal" data-ef="amt" value="${esc(e.amt)}" placeholder="$" aria-label="Cost">
+    <button class="x" data-act="del-extra" aria-label="Remove item">×</button>
+  </div>`).join("");
+}
+function renderRates(){
+  if(document.getElementById("ratesBox").contains(document.activeElement))return;
+  const grid=sec=>SVC.map((s,i)=>s.sec!==sec?"":`<label>${esc(s.label||s.k)}<input id="r-${i}" class="rate-in" type="number" step="0.25" inputmode="decimal" data-k="R.rates.${s.k}" value="${n(RATES.rates[s.k])}"></label>`).join("");
+  document.getElementById("ratesGrid").innerHTML=grid("m2");
+  document.getElementById("ratesGridSS").innerHTML=grid("ss");
+  document.getElementById("ratesGridItem").innerHTML=grid("item");
+  document.querySelectorAll("#ratesBox [data-k]").forEach(el=>{el.value=getPath(el.dataset.k)??"";el.disabled=!ROLE.owner});
+  document.getElementById("lockLabel").textContent=ROLE.owner?"":"🔒 Owner only";
+  document.getElementById("ratesIntro").textContent=ROLE.owner
+    ?"All rates are ex GST, before the condition multiplier. GST (10%) is added at the end of each quote. Changes save for everyone straight away and apply to new quotes."
+    :"Only the owner can change rates. Ask the owner if a job needs a different price.";
+}
+function bindFields(){
+  document.querySelectorAll("#view-quote [data-k]:not(.rate-in)").forEach(el=>{const v=getPath(el.dataset.k);
+    if(el.type==="checkbox")el.checked=!!v;else el.value=v??""});
+}
+function updateSaveNote(){
+  const note=document.getElementById("saveNote");
+  if(!ROLE.dbOk){note.textContent="Saved quotes aren't available in this view. Drafts stay on this phone only.";return}
+  if(S.example)note.textContent="Example only. Start a blank quote to save one.";
+  else if(!S.qid)note.textContent="Not saved yet. Tap Save to add it to Saved quotes.";
+  else note.textContent=S.dirty?"Unsaved changes. Tap Save.":"Saved. Everyone with access can see it.";
+  document.getElementById("saveBtn").disabled=!ROLE.dbOk||S.example;
+}
+function updateTotals(){
+  const c=calc();
+  S.items.forEach(it=>{const d=document.getElementById("lt-d-"+it.id),t=document.getElementById("lt-"+it.id);
+    if(!d)return;const u=svcOf(it.svc).u;
+    document.getElementById("lt-w-"+it.id).classList.toggle("unpriced",!isPriced(it));
+    if(!isPriced(it)){t.textContent=money(0);
+      d.textContent=isMeasuring(it)?"Measuring photos…":u==="job"?"$0 until you enter the job price.":u==="item"?"$0 until you enter the number of seats.":"$0 until you type the m² or add photos of the area.";return}
+    d.textContent=u==="job"?"Fixed job price, ex GST":`${qtyText(it)} × ${money(n(S.set.rates[it.svc]))} × ${n(S.set.cond[it.cond])}`;t.textContent=money(lineCost(it))});
+  document.getElementById("zoneInfo").textContent=c.t.label;
+  document.getElementById("afterPctLabel").textContent=`(+${n(S.set.afterPct)}% on job cost)`;
+  document.getElementById("discHint").textContent=ROLE.owner?"":`Up to ${n(RATES.maxDisc)}%. Larger discounts need the owner.`;
+  const rows=[["Job cost (services)",c.job]];
+  if(c.after)rows.push([`After-hours surcharge (${n(S.set.afterPct)}%)`,c.after]);
+  rows.push(["Travel",c.t.fee,"sub"]);if(c.t.parking)rows.push(["Parking",c.t.parking,"sub"]);
+  rows.push([`Chemicals and consumables (${n(S.mat.pct)}%)`,c.chem,"sub"]);
+  S.mat.extras.forEach(e=>{if(n(e.amt))rows.push([e.name||"Item",n(e.amt),"sub"])});
+  rows.push(["Subtotal",c.sub]);
+  if(c.minAdj)rows.push([`Top-up to minimum call-out (${money(n(S.set.minCharge))} + GST)`,c.minAdj]);
+  if(c.disc)rows.push([`Discount (${n(S.adj.disc)}%)`,-c.disc]);
+  rows.push(["Total ex GST",c.ex],["GST (10%)",c.gst,"sub"]);
+  document.getElementById("sumTable").innerHTML=c.empty
+    ?`<tr class="sub"><td colspan="2">No services priced yet. Type the m² or add a photo of the area to at least one service.</td></tr><tr class="grand"><td>Total inc GST</td><td>${money(0)}</td></tr>`
+    :rows.map(([l,v,cl])=>`<tr class="${cl||""}"><td>${esc(l)}</td><td>${money(v)}</td></tr>`).join("")+`<tr class="grand"><td>Total inc GST</td><td>${money(c.total)}</td></tr>`;
+  document.getElementById("barTotal").textContent=money(c.empty?0:c.total);
+  document.getElementById("qnoLabel").textContent=`Quote ${S.q.no}`;
+  document.getElementById("exampleBanner").hidden=!S.example;
+  document.getElementById("ratesBanner").hidden=S.ratesLive||JSON.stringify(normRates(S.set))===JSON.stringify(normRates(RATES));
+  updateSaveNote();
+}
+function renderAll(){renderDrawings();renderItems();renderExtras();renderRates();bindFields();updateTotals()}
+
+/* ---------- rendering: saved quotes ---------- */
+let filter="All",search="";
+async function renderList(){
+  document.getElementById("listCount").textContent=QUOTES.length;
+  if(document.getElementById("view-list").hidden)return;
+  const box=document.getElementById("qlist");
+  const sum=st=>QUOTES.filter(q=>q.status===st).reduce((a,q)=>a+n(q.total),0);
+  const cnt=st=>QUOTES.filter(q=>q.status===st).length;
+  document.getElementById("stats").innerHTML=[["Open (sent)",sum("Sent"),cnt("Sent")],["Accepted",sum("Accepted"),cnt("Accepted")],["Drafts",sum("Draft"),cnt("Draft")]]
+    .map(([l,v,c])=>`<div class="stat"><small>${l} · ${c}</small><b>${money(v)}</b></div>`).join("");
+  document.getElementById("filters").innerHTML=["All",...STATUSES].map(s=>`<button class="chip" data-act="filter" data-f="${s}" aria-pressed="${s===filter}">${s}</button>`).join("");
+  if(!ROLE.dbOk){box.innerHTML=`<div class="empty">Saved quotes need you to be signed in to claude.ai with access to this page. Quotes you make here stay on this phone until then.</div>`;return}
+  const s=search.trim().toLowerCase();
+  const rows=QUOTES.filter(q=>(filter==="All"||q.status===filter)&&(!s||[q.client,q.site,q.no].join(" ").toLowerCase().includes(s)));
+  if(!QUOTES.length){box.innerHTML=`<div class="empty">No saved quotes yet. Fill in a quote and tap <b>Save</b> to add it here.</div>`;return}
+  if(!rows.length){box.innerHTML=`<div class="empty">No quotes match.</div>`;return}
+  let ps={};if(user){try{ps=await user.profiles([...new Set(rows.map(q=>q.updatedBy||q.createdBy).filter(Boolean))])}catch(e){}}
+  box.innerHTML=rows.map(q=>{const who=q.updatedBy||q.createdBy;const name=(who&&ps[who]&&ps[who].name)||q.sales||"";
+    const when=q.updatedAt?new Date(q.updatedAt).toLocaleDateString("en-AU",{day:"numeric",month:"short"}):"";
+    return `<button class="qrow${q.id===S.qid?" current":""}" data-act="open" data-id="${esc(q.id)}">
+      <b>${esc(q.client||"No client name")}</b><span class="amt">${money(n(q.total))}</span>
+      <span class="meta">${esc(q.site||"No site address")} · ${esc(q.no)}</span><span class="pillcell"><span class="pill ${esc(q.status)}">${esc(q.status)}</span></span>
+      <span class="meta">${when?`Updated ${when}`:""}${name?` · ${esc(name)}`:""}</span><span></span>
+    </button>`}).join("");
+}
+
+/* ---------- events ---------- */
+document.addEventListener("input",ev=>{
+  const el=ev.target;
+  if(el.id==="searchBox"){search=el.value;renderList();return}
+  if(el.dataset.k){
+    if(el.dataset.k.startsWith("R.")){if(!ROLE.owner)return;setPath(el.dataset.k,el.type==="number"?n(el.value):el.value);
+      if(S.ratesLive){S.set=clone(RATES);if(el.dataset.k.startsWith("R.cond"))renderItems()}
+      writeRates();updateTotals();return}
+    if(el.dataset.k==="adj.disc"&&!ROLE.owner&&n(el.value)>n(RATES.maxDisc)){el.value=n(RATES.maxDisc);toast(`Discounts over ${n(RATES.maxDisc)}% need the owner's approval`)}
+    setPath(el.dataset.k,el.type==="checkbox"?el.checked:el.value);touch();updateTotals();return}
+  const card=el.closest("[data-item]");
+  const ar=el.closest("[data-area]");
+  if(ar&&el.dataset.af){const a=findArea(ar.dataset.area);if(a){a[el.dataset.af]=el.value;syncDrawingItems();renderItems();updateTotals();updateDrawSums();touch()}return}
+  if(card&&el.dataset.pest!==undefined){const it=S.items.find(i=>i.id===card.dataset.item);const p=it&&it.photos[+el.dataset.pest];
+    if(p){p.est=el.value;p.estState="edited";touch();updateTotals()}return}
+  if(card&&el.dataset.f){const it=S.items.find(i=>i.id===card.dataset.item);
+    if(el.dataset.f==="svc"&&svcOf(it.svc).u!==svcOf(el.value).u){it.area="";it.L="";it.W="";it.price=""}
+    it[el.dataset.f]=el.value;
+    if(el.dataset.f==="svc"){renderItems();const sel=document.getElementById("i-"+it.id+"-svc");sel&&sel.focus()}
+    touch();updateTotals();return}
+  const ex=el.closest("[data-extra]");
+  if(ex&&el.dataset.ef){const e=S.mat.extras.find(x=>x.id===ex.dataset.extra);e[el.dataset.ef]=el.value;touch();updateTotals()}
+});
+document.addEventListener("change",async ev=>{
+  const el=ev.target;
+  if(el.dataset.act==="drawing"){const files=[...el.files];el.value="";for(const f of files)await addDrawing(f);return}
+  if(el.dataset.act==="photo"){const it=S.items.find(i=>i.id===el.closest("[data-item]").dataset.item);
+    const added=[];
+    for(const f of el.files){const d=await shrink(f);if(d){const p={pid:"p"+Date.now().toString(36)+uid(),data:d,saved:false,est:"",estState:""};it.photos.push(p);added.push(p)}}
+    el.value="";
+    if(svcOf(it.svc).u==="m2"&&canMeasure)added.forEach(p=>queueMeasure(it,p));
+    renderItems();updateTotals();touch()}
+});
+let armed=null,openArmed=null;
+function arm(b,label,orig){if(armed===b)return true;armed=b;b.textContent=label;setTimeout(()=>{if(armed===b){armed=null;b.textContent=orig}},4000);return false}
+document.addEventListener("click",ev=>{
+  const b=ev.target.closest("[data-act]");if(!b||b.tagName==="INPUT")return;
+  const act=b.dataset.act;const card=b.closest("[data-item]");const it=card&&S.items.find(i=>i.id===card.dataset.item);
+  if(act==="tab")showTab(b.dataset.tab);
+  if(act==="add-item"){S.items.push({id:uid(),svc:"General cleaning",area:"",L:"",W:"",cond:"m",price:"",notes:"",photos:[]});renderItems();updateTotals();touch();
+    const last=document.querySelector("#items .item:last-child select");last&&last.focus()}
+  if(act==="del-item"&&it.src==="drawing"){allAreas().forEach(a=>{if(a.svc===it.svc)a.svc=""});syncDrawingItems();renderDrawings();renderItems();updateTotals();touch();toast("Removed. Those areas are now set to Don't quote.");return}
+  if(act==="del-item"){it.photos.filter(p=>p.saved).forEach(p=>S.removedPhotos.push(p.pid));S.items=S.items.filter(i=>i!==it);renderItems();updateTotals();touch()}
+  if(act==="lw"){const a=n(it.L)*n(it.W);if(a>0){it.area=+(n(it.area)+a).toFixed(2);it.L="";it.W="";renderItems();updateTotals();touch();toast(`Added ${+a.toFixed(2)} m²`)}else toast("Enter length and width first")}
+  if(act==="del-drawing"){const d=S.drawings.find(x=>x.id===b.closest("[data-draw]").dataset.draw);
+    if(d&&!arm(b,"Tap again to remove","×"))return;armed=null;
+    if(d){d.pages.forEach(pg=>{if(pg.saved)S.removedPhotos.push(pg.pid)});S.drawings=S.drawings.filter(x=>x!==d);syncDrawingItems();renderDrawings();renderItems();updateTotals();touch()}}
+  if(act==="read-page"){const d=S.drawings.find(x=>x.id===b.closest("[data-draw]").dataset.draw);const pg=d&&d.pages[+b.dataset.pi];if(pg&&canMeasure){queueRead(d,pg);renderDrawings()}}
+  if(act==="add-area"){const d=S.drawings.find(x=>x.id===b.closest("[data-draw]").dataset.draw);const pg=d&&d.pages[+b.dataset.pi];
+    if(pg){pg.areas.push({id:"a"+uid(),name:"",area:"",svc:"Builders clean",basis:"typed",conf:""});renderDrawings();const ins=document.querySelectorAll(`[data-draw="${d.id}"] [data-af="name"]`);ins.length&&ins[ins.length-1].focus()}}
+  if(act==="del-area"){const id=b.closest("[data-area]").dataset.area;S.drawings.forEach(d=>d.pages.forEach(pg=>pg.areas=pg.areas.filter(a=>a.id!==id)));syncDrawingItems();renderDrawings();renderItems();updateTotals();touch()}
+  if(act==="view-page"){const d=S.drawings.find(x=>x.id===b.closest("[data-draw]").dataset.draw);const pg=d&&d.pages[+b.dataset.pi];if(!pg||!pg.data)return;document.getElementById("viewerImg").src=pg.data;document.getElementById("viewer").hidden=false;document.body.style.overflow="hidden";document.getElementById("viewer").scrollTop=0}
+  if(act==="close-viewer"){document.getElementById("viewer").hidden=true;document.body.style.overflow=""}
+  if(act==="measure"){const p=it.photos[+b.dataset.pi];if(p&&canMeasure){queueMeasure(it,p);refreshPhotos(it);updateTotals()}}
+  if(act==="del-photo"){const p=it.photos.splice(+b.dataset.pi,1)[0];if(p&&p.saved)S.removedPhotos.push(p.pid);renderItems();updateTotals();touch()}
+  if(act==="add-extra"){S.mat.extras.push({id:uid(),name:"",amt:""});renderExtras();touch();
+    const l=document.querySelector("#extras .row:last-child input");l&&l.focus()}
+  if(act==="del-extra"){const id=b.closest("[data-extra]").dataset.extra;S.mat.extras=S.mat.extras.filter(e=>e.id!==id);renderExtras();updateTotals();touch()}
+  if(act==="new-blank"){S=blankQuote();renderAll();saveLocal();window.scrollTo(0,0)}
+  if(act==="new-quote"){if(S.dirty&&!S.example&&!arm(b,"Unsaved changes. Tap again to discard","New quote"))return;
+    armed=null;b.textContent="New quote";S=blankQuote();renderAll();saveLocal();window.scrollTo(0,0);toast("New quote started")}
+  if(act==="reprice"){S.set=clone(RATES);S.ratesLive=true;renderItems();updateTotals();touch();toast("Repriced with current rates")}
+  if(act==="save")saveQuote();
+  if(act==="filter"){filter=b.dataset.f;renderList()}
+  if(act==="open"){const id=b.dataset.id;if(id===S.qid&&!S.dirty){showTab("quote");return}
+    if(S.dirty&&!S.example&&openArmed!==id){openArmed=id;const m=b.querySelectorAll(".meta");m[m.length-1].textContent="Your current quote has unsaved changes. Tap again to open this one anyway.";setTimeout(()=>{if(openArmed===id){openArmed=null;renderList()}},5000);return}
+    openArmed=null;openQuote(id)}
+  if(act==="preview"){buildPaper();document.getElementById("sheet").hidden=false;document.body.style.overflow="hidden";document.getElementById("sheet").scrollTop=0}
+  if(act==="close"){document.getElementById("sheet").hidden=true;document.body.style.overflow=""}
+  if(act==="copy"){const t=quoteText();try{navigator.clipboard.writeText(t).then(()=>toast("Quote copied"),()=>fallbackCopy(t))}catch(e){fallbackCopy(t)}}
+});
+function showTab(t){
+  document.getElementById("view-quote").hidden=t!=="quote";document.getElementById("view-list").hidden=t!=="list";
+  document.getElementById("bar").hidden=t!=="quote";
+  document.getElementById("tab-quote").setAttribute("aria-selected",t==="quote");document.getElementById("tab-list").setAttribute("aria-selected",t==="list");
+  window.scrollTo(0,0);if(t==="list")renderList();
+}
+function fallbackCopy(t){const ta=document.createElement("textarea");ta.value=t;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();
+  let ok=false;try{ok=document.execCommand("copy")}catch(e){}ta.remove();toast(ok?"Quote copied":"Copy blocked here. Take a screenshot instead.")}
+function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+function drawJpeg(img,max,q){const s=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext("2d").drawImage(img,0,0,c.width,c.height);return c.toDataURL("image/jpeg",q)}
+function shrink(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{
+  let d=drawJpeg(img,1000,.65);if(d.length>230000)d=drawJpeg(img,800,.55);if(d.length>230000)d=drawJpeg(img,600,.5);res(d)};img.onerror=()=>res(null);img.src=r.result};r.onerror=()=>res(null);r.readAsDataURL(file)})}
+
+/* ---------- reading photos and drawings (asks Claude, on the viewer's own account) ---------- */
+let sampleFn=null,canMeasure=false,measureChecked=false;
+const jobs=[];let running=false;
+function enqueue(job){jobs.push(job);runJobs()}
+async function runJobs(){if(running)return;running=true;while(jobs.length){const j=jobs.shift();try{await j()}catch(e){}}running=false}
+function dataToBlob(d){const i=d.indexOf(",");const bin=atob(d.slice(i+1));const u=new Uint8Array(bin.length);for(let k=0;k<bin.length;k++)u[k]=bin.charCodeAt(k);
+  return new Blob([u],{type:(d.slice(0,i).match(/:(.*?);/)||[])[1]||"image/jpeg"})}
+function measurePrompt(it){const sv=svcOf(it.svc);
+  return `You are measuring areas from site photos for a cleaning company quote in Perth, Western Australia.
+Service: ${svcLabel(it.svc)}.
+Measure: ${sv.m||"the surface area this service would clean"}, as visible in this one photo.
+Property type: ${S.q.ptype}. Salesperson notes: ${(it.notes||"none").slice(0,600)}
+
+Estimate the area in square metres. Work out scale from objects of known size: Australian internal doors are about 2.04 m high and 0.82 m wide; floor tiles are usually 300, 450 or 600 mm square; bricks are 230 x 76 mm; kitchen benchtops are about 0.9 m high and 0.6 m deep; ceilings are usually 2.4 to 2.7 m high; a single garage door is about 2.4 m wide; a car is about 4.5 m long; pavers are often 400 mm square. If the notes give a real measurement, use it as the scale.
+Count only the surface for this service. Include floor hidden under furniture if it is clearly part of the same room.
+Reply with only this JSON object:
+{"area_m2": number or null, "low": number, "high": number, "what": "short description of what you measured", "reference": "what you used for scale", "confidence": "low" | "medium" | "high", "why": "only when area_m2 is null: why it can't be measured"}`}
+function errCopy(code){return ({not_granted:"Photo measuring wasn't allowed. Type the m² instead.",rate_limited:"Too many photos measured just now. Wait a minute, then tap Measure.",image_rejected:"This photo couldn't be read. Try another photo.",session_expired:"Sign in to claude.ai again, then tap Measure.",refused:"This photo couldn't be measured. Type the m² instead.",invalid_json:"The measurement came back unclear. Tap Measure to try again."})[code]||"Couldn't measure this photo. Tap Measure to try again, or type the m²."}
+const FATAL=["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed","images_unavailable"];
+function stopQueue(disable){
+  jobs.length=0;if(disable){canMeasure=false;measureChecked=true}
+  S.items.forEach(i=>i.photos.forEach(x=>{if(x.estState==="queued")x.estState=""}));
+  S.drawings.forEach(d=>d.pages.forEach(pg=>{if(pg.state==="queued")pg.state=""}));
+  renderItems();renderDrawings();updateTotals();
+}
+function handleAiError(e){const c=e&&e.code;if(FATAL.includes(c))stopQueue(true);else if(c==="rate_limited")stopQueue(false)}
+
+function queueMeasure(it,p){if(!canMeasure||!p.data)return;p.estState="queued";const iid=it.id,pid=p.pid;enqueue(()=>measureOne(iid,pid))}
+async function measureOne(iid,pid){
+  const it=S.items.find(i=>i.id===iid);const p=it&&it.photos.find(x=>x.pid===pid);
+  if(!p||p.estState!=="queued")return;
+  if(!p.data||svcOf(it.svc).u!=="m2"){p.estState="";refreshPhotos(it);return}
+  p.estState="measuring";refreshPhotos(it);updateTotals();
+  try{
+    const r=await sampleFn.json(measurePrompt(it),{images:[dataToBlob(p.data)]});
+    const a=Number(r&&r.area_m2);
+    if(a>0){p.est=+a.toFixed(1);p.low=+(n(r.low)).toFixed(1);p.high=+(n(r.high)).toFixed(1);
+      p.estNote=[r.what?String(r.what).slice(0,160)+".":"",r.reference?`Scale from ${String(r.reference).slice(0,120)}.`:""].filter(Boolean).join(" ");
+      p.conf=["low","medium","high"].includes(r.confidence)?r.confidence:"medium";p.estState="done"}
+    else{p.est="";p.conf="";p.estNote=(r&&r.why?String(r.why).slice(0,200)+" ":"")+"Type the m² instead.";p.estState="error"}
+  }catch(e){p.estState="error";p.conf="";p.estNote=errCopy(e&&e.code);handleAiError(e)}
+  touch();refreshPhotos(it);updateTotals();
+}
+
+/* ---------- building drawings ---------- */
+const PDFJS="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+const MAX_PAGES=12;
+let pdfReady=null;
+function loadScript(src){return new Promise((res,rej)=>{const t=document.createElement("script");t.src=src;t.onload=res;t.onerror=()=>rej(new Error("load"));document.head.appendChild(t)})}
+function loadPdfJs(){if(!pdfReady)pdfReady=loadScript(PDFJS+"pdf.worker.min.js").then(()=>loadScript(PDFJS+"pdf.min.js")).catch(e=>{pdfReady=null;throw e});return pdfReady}
+async function pdfCanvases(file){
+  await loadPdfJs();
+  const doc=await window.pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
+  const out=[];
+  for(let i=1;i<=Math.min(doc.numPages,MAX_PAGES);i++){
+    const page=await doc.getPage(i);const v0=page.getViewport({scale:1});
+    const v=page.getViewport({scale:Math.min(4,2000/Math.max(v0.width,v0.height))});
+    const c=document.createElement("canvas");c.width=Math.round(v.width);c.height=Math.round(v.height);
+    const ctx=c.getContext("2d");ctx.fillStyle="#ffffff";ctx.fillRect(0,0,c.width,c.height);
+    await page.render({canvasContext:ctx,viewport:v}).promise;out.push(c)}
+  return {canvases:out,total:doc.numPages};
+}
+function fileImage(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>res(img);img.onerror=()=>rej(new Error("img"));img.src=r.result};r.onerror=()=>rej(new Error("img"));r.readAsDataURL(f)})}
+function pageJpeg(src){let d=drawJpeg(src,1600,.8);for(const [m,q] of [[1400,.7],[1200,.6],[1000,.55],[800,.5]]){if(d.length<=240000)break;d=drawJpeg(src,m,q)}return d}
+async function addDrawing(f){
+  const d={id:"d"+uid(),name:f.name||"Drawing",pages:[],err:"",loading:true};S.drawings.push(d);renderDrawings();
+  try{
+    let srcs=[],total=1;
+    if(/pdf/i.test(f.type)||/\.pdf$/i.test(f.name)){const r=await pdfCanvases(f);srcs=r.canvases;total=r.total}
+    else srcs=[await fileImage(f)];
+    srcs.forEach(c=>d.pages.push({pid:"p"+Date.now().toString(36)+uid(),data:pageJpeg(c),saved:false,state:"",areas:[],total:null,note:""}));
+    if(total>srcs.length)d.err=`Only the first ${srcs.length} of ${total} pages were added.`;
+  }catch(e){d.err=e&&e.message==="load"?"The drawing reader couldn't load. Check your connection and try again.":"This file couldn't be opened. Use a PDF, JPG or PNG."}
+  d.loading=false;
+  if(canMeasure)d.pages.forEach(pg=>queueRead(d,pg));
+  renderDrawings();touch();
+}
+const M2_SVCS=()=>SVC.filter(x=>x.u==="m2");
+function defaultSvc(finish,outdoor){
+  if(outdoor||finish==="concrete"||finish==="paving")return "High pressure cleaning";
+  if(/new build|construction/i.test(S.q.ptype))return "Builders clean";
+  return ({carpet:"Carpet cleaning",tile:"Tile and grout cleaning",vinyl:"Deep machine scrub vinyl flooring"})[finish]||"General cleaning";
+}
+function readPrompt(d,pi){
+  return `This image is page ${pi+1} of a building drawing used to quote a cleaning job in Perth, Western Australia. Property type: ${S.q.ptype}. File name: ${String(d.name).slice(0,120)}.
+List every room or area shown with its floor area in square metres.
+- Use areas written on the drawing first (on room labels or in an area schedule).
+- Otherwise calculate from the dimensions written on the drawing. Australian drawings use millimetres, so 4200 x 3600 is 15.1 m2.
+- Otherwise estimate from the drawing scale.
+- Include garages and outdoor hard surfaces that are drawn (alfresco, porch, patio, driveway, paths).
+- Do not list total rows such as "Total living" or "Total area" as areas. Put the drawing's own total floor area in total_m2_on_drawing.
+- If this page is not a floor plan (elevations, sections, site notes, cover sheet), return an empty areas list and say what the page shows in note.
+This drawing is used to price a builders clean, which is charged on the floor area of the building.
+Reply with only this JSON:
+{"areas":[{"name":string,"area_m2":number,"finish":"carpet"|"tile"|"vinyl"|"timber"|"concrete"|"paving"|"other"|"unknown","outdoor":boolean,"basis":"written"|"dimensions"|"scaled","confidence":"low"|"medium"|"high"}],"total_m2_on_drawing":number or null,"note":string}`;
+}
+function queueRead(d,pg){if(!canMeasure||!pg.data)return;pg.state="queued";const did=d.id,pid=pg.pid;enqueue(()=>readPage(did,pid))}
+async function readPage(did,pid){
+  const d=S.drawings.find(x=>x.id===did);const pi=d?d.pages.findIndex(x=>x.pid===pid):-1;const pg=pi>=0&&d.pages[pi];
+  if(!pg||pg.state!=="queued")return;
+  pg.state="reading";renderDrawings();
+  try{
+    const r=await sampleFn.json(readPrompt(d,pi),{images:[dataToBlob(pg.data)]});
+    const list=Array.isArray(r&&r.areas)?r.areas.slice(0,60):[];
+    pg.areas=list.filter(a=>a&&n(a.area_m2)>0).map(a=>{const garage=/garage/i.test(String(a.name||""));
+      return {id:"a"+uid(),name:String(a.name||"Area").slice(0,60),area:+n(a.area_m2).toFixed(1),finish:String(a.finish||""),outdoor:!!a.outdoor||/garage/i.test(String(a.name||"")),
+        svc:a.outdoor&&!garage?"":"Builders clean",basis:["written","dimensions","scaled"].includes(a.basis)?a.basis:"scaled",
+        conf:["low","medium","high"].includes(a.confidence)?a.confidence:"medium"}});
+    pg.total=n(r&&r.total_m2_on_drawing)>0?+n(r.total_m2_on_drawing).toFixed(1):null;
+    pg.note=r&&r.note?String(r.note).slice(0,240):"";
+    pg.state="done";
+  }catch(e){pg.state="error";pg.note=errCopy(e&&e.code).replace("Tap Measure","Tap Read page").replace("tap Measure","tap Read page").replace("type the m²","type the areas in");handleAiError(e)}
+  syncDrawingItems();renderDrawings();renderItems();updateTotals();touch();
+}
+function allAreas(){const out=[];S.drawings.forEach(d=>d.pages.forEach(pg=>pg.areas.forEach(a=>out.push(a))));return out}
+function findArea(id){return allAreas().find(a=>a.id===id)}
+/* Services built from the drawings: one line per service, m² = the areas set to that service. */
+function syncDrawingItems(){
+  const groups={};allAreas().forEach(a=>{if(a.svc)a.svc="Builders clean";if(a.svc&&n(a.area)>0)(groups[a.svc]=groups[a.svc]||[]).push(a)});
+  const old=S.items.filter(i=>i.src==="drawing");
+  const manual=S.items.filter(i=>i.src!=="drawing");
+  const blank=i=>!n(i.area)&&!i.photos.length&&!n(i.price)&&!String(i.notes||"").trim();
+  const gen=SVC.filter(x=>groups[x.k]).map(x=>{const list=groups[x.k];const prev=old.find(o=>o.svc===x.k);
+    return {id:prev?prev.id:uid(),src:"drawing",svc:x.k,area:+list.reduce((t,a)=>t+n(a.area),0).toFixed(1),L:"",W:"",cond:prev?prev.cond:"m",price:"",photos:prev?prev.photos:[],
+      notes:"From drawing: "+list.map(a=>`${a.name||"Area"} ${n(a.area)} m²`).join(", ")}});
+  old.filter(o=>!gen.some(g=>g.id===o.id)).forEach(o=>o.photos.filter(p=>p.saved).forEach(p=>S.removedPhotos.push(p.pid)));
+  S.items=[...(gen.length?manual.filter(i=>!blank(i)):manual),...gen];
+}
+let drawPending=false;
+function renderDrawings(){
+  const box=document.getElementById("drawings");
+  if(box.contains(document.activeElement)&&document.activeElement.tagName!=="BUTTON"){drawPending=true;return}
+  drawPending=false;
+  document.getElementById("drawHint").textContent=canMeasure
+    ?"For builders cleans only. Upload the floor plan as a PDF or a photo. Every room and its m² is read from the drawing and priced as Builders clean. Check each area and untick any that aren't part of the clean. Other services are priced from m² or photos below."
+    :(measureChecked?"Reading drawings isn't available in this view. You can still attach a drawing and type each area in.":"Checking whether drawing reading is available…");
+  document.getElementById("drawCount").textContent=S.drawings.length?`${S.drawings.length} ${S.drawings.length===1?"drawing":"drawings"}`:"";
+  const opts=sel=>`<option value="Builders clean"${sel?" selected":""}>Builders clean</option><option value=""${!sel?" selected":""}>Don't quote</option>`;
+  box.innerHTML=S.drawings.map(d=>`<div class="drawing" data-draw="${esc(d.id)}">
+    <div class="dhead"><b>${esc(d.name)}</b><button class="x" data-act="del-drawing" aria-label="Remove drawing" title="Remove drawing">×</button></div>
+    ${d.loading?`<span class="busy">Opening drawing…</span>`:""}${d.err?`<small class="hint">${esc(d.err)}</small>`:""}
+    ${d.pages.map((pg,pi)=>{
+      let status="";
+      if(pg.state==="queued")status=`<span class="busy">Waiting to read…</span>`;
+      else if(pg.state==="reading")status=`<span class="busy">Reading rooms and areas…</span>`;
+      else if(pg.note)status=`<small class="hint">${esc(pg.note)}</small>`;
+      const rows=pg.areas.map(a=>`<div class="arow" data-area="${esc(a.id)}">
+        <input id="an-${esc(a.id)}" data-af="name" value="${esc(a.name)}" placeholder="Room or area" aria-label="Area name">
+        <input id="am-${esc(a.id)}" data-af="area" type="number" inputmode="decimal" value="${esc(a.area)}" placeholder="m²" aria-label="${esc(a.name||"Area")} m²">
+        <select id="as-${esc(a.id)}" data-af="svc" aria-label="Service for ${esc(a.name||"area")}">${opts(a.svc)}</select>
+        <small>${a.basis==="written"?"Area written on drawing":a.basis==="dimensions"?"Worked out from dimensions":a.basis==="typed"?"Typed in":"Estimated from drawing scale"}${a.conf?` · ${a.conf} confidence`:""} · <button class="linkbtn" data-act="del-area" style="background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit">Remove</button></small>
+      </div>`).join("");
+      const again=canMeasure&&pg.state!=="queued"&&pg.state!=="reading"?`<button class="btn small ghost" data-act="read-page" data-pi="${pi}">${pg.state==="done"?"Read again (replaces areas)":"Read page"}</button>`:"";
+      return `<div class="dpage">
+        <button class="dthumb" data-act="view-page" data-pi="${pi}" aria-label="View page ${pi+1} full size">${pg.data?`<img src="${pg.data}" alt="Page ${pi+1} of ${esc(d.name)}">`:`<span class="hint">Page ${pi+1}</span>`}</button>
+        <div class="dinfo"><div class="hint">Page ${pi+1}</div>${status}
+          ${rows?`<div class="alist">${rows}</div>`:""}
+          ${pg.areas.length?`<div class="dsum" id="ds-${esc(pg.pid)}"></div>`:""}
+          <div class="actions"><button class="btn small ghost" data-act="add-area" data-pi="${pi}">+ Add area</button>${again}</div>
+        </div></div>`}).join("")}
+  </div>`).join("");
+  updateDrawSums();
+}
+function updateDrawSums(){
+  S.drawings.forEach(d=>d.pages.forEach(pg=>{const el=document.getElementById("ds-"+pg.pid);if(!el)return;
+    const all=+pg.areas.reduce((t,a)=>t+n(a.area),0).toFixed(1);const q=+pg.areas.reduce((t,a)=>t+(a.svc?n(a.area):0),0).toFixed(1);
+    let txt=`Quoting ${q} m² of ${all} m² listed.`;let warn=false;
+    const inside=+pg.areas.reduce((t,a)=>t+(a.outdoor?0:n(a.area)),0).toFixed(1);
+    if(pg.total){txt+=` Drawing total: ${pg.total} m² (indoor rooms listed: ${inside} m²).`;warn=Math.abs(inside-pg.total)>pg.total*0.1}
+    el.textContent=txt+(warn?" The indoor rooms don't add up to the drawing total. Check for missing or doubled rooms.":"");el.classList.toggle("warn",warn)}));
+}
+document.addEventListener("focusout",()=>{setTimeout(()=>{if(drawPending)renderDrawings()},0)});
+
+/* ---------- shared storage ---------- */
+let rateTimer,rateWriting=false,ratePending=false;
+function writeRates(){if(!db||!ROLE.owner)return;clearTimeout(rateTimer);rateTimer=setTimeout(async()=>{
+  if(rateWriting){ratePending=true;return}rateWriting=true;
+  try{await db.doc("config/rates").set(clone(RATES));toast("Rate card saved")}catch(e){toast("Couldn't save the rate card. Check your connection and try again.")}
+  rateWriting=false;if(ratePending){ratePending=false;writeRates()}},700)}
+
+let saving=false;
+async function saveQuote(){
+  if(!db||saving||S.example)return;
+  const btn=document.getElementById("saveBtn");saving=true;btn.textContent="Saving…";btn.disabled=true;
+  try{
+    if(!S.qid)S.qid="q"+Date.now().toString(36)+uid();
+    const ref=db.collection("quotes").doc(S.qid);
+    for(const it of S.items)for(const p of it.photos){if(!p.saved&&p.data){await ref.collection("photos").doc(p.pid).set({item:it.id,data:p.data});p.saved=true}}
+    for(const d of S.drawings)for(const pg of d.pages){if(!pg.saved&&pg.data){await ref.collection("photos").doc(pg.pid).set({item:"drawing",data:pg.data});pg.saved=true}}
+    for(const pid of S.removedPhotos){try{await ref.collection("photos").doc(pid).delete()}catch(e){}}
+    S.removedPhotos=[];
+    const c=calc();const now=new Date().toISOString();
+    if(!S.createdAt)S.createdAt=now;if(!S.createdBy)S.createdBy=ROLE.id;
+    const body={no:S.q.no,client:S.q.client,site:S.q.site,sales:S.q.sales,status:S.status,total:+c.total.toFixed(2),totalEx:+c.ex.toFixed(2),
+      createdAt:S.createdAt,updatedAt:now,createdBy:S.createdBy||null,updatedBy:ROLE.id||null,
+      q:S.q,items:S.items.map(i=>Object.assign({},i,{photos:i.photos.map(p=>({pid:p.pid,est:p.est??"",low:p.low??"",high:p.high??"",conf:p.conf||"",estNote:p.estNote||"",estState:p.estState==="measuring"||p.estState==="queued"?"":(p.estState||"")}))})),travel:S.travel,mat:S.mat,adj:S.adj,set:S.set,
+      drawings:S.drawings.map(d=>({id:d.id,name:d.name,err:d.err||"",pages:d.pages.map(pg=>({pid:pg.pid,areas:pg.areas,total:pg.total??null,note:pg.note||"",state:pg.state==="done"?"done":""}))}))};
+    await ref.set(body);
+    S.dirty=false;S.ratesLive=false;saveLocal();updateTotals();toast("Quote saved");
+  }catch(e){toast(e&&e.code==="quota_exceeded"?"Storage is full. Delete old photos or quotes, then try again.":"Couldn't save. Check your connection and try again.")}
+  saving=false;btn.textContent="Save";updateSaveNote();
+}
+async function openQuote(id){
+  const q=QUOTES.find(x=>x.id===id);if(!q||!db)return;
+  toast("Opening quote…");
+  let photos={};
+  try{const snap=await db.collection("quotes").doc(id).collection("photos").get();snap.docs.forEach(d=>{photos[d.id]=d.data()})}catch(e){}
+  const s=clone(q);
+  S=normQuote({qid:id,example:false,ratesLive:false,dirty:false,status:s.status,createdBy:s.createdBy,createdAt:s.createdAt,q:s.q,
+    items:(s.items||[]).map(it=>Object.assign({},it,{photos:(it.photos||[]).map(x=>typeof x==="string"?{pid:x}:x).filter(x=>photos[x.pid]).map(x=>Object.assign({},x,{data:photos[x.pid].data,saved:true}))})),
+    drawings:(s.drawings||[]).map(d=>Object.assign({},d,{pages:(d.pages||[]).map(pg=>Object.assign({},pg,{data:photos[pg.pid]?photos[pg.pid].data:"",saved:!!photos[pg.pid]}))})),
+    travel:s.travel,mat:s.mat,adj:s.adj,set:s.set,removedPhotos:[]});
+  renderAll();saveLocal();showTab("quote");
+}
+
+async function connect(){
+  if(!window.claude||!window.claude.use){measureChecked=true;renderDrawings();renderItems();renderRates();updateTotals();return}
+  [db,user,sampleFn]=await Promise.all([claude.use("db"),claude.use("user"),claude.use("sample")]);
+  if(sampleFn){try{const l=await sampleFn.limits();canMeasure=!!(l&&l.images)}catch(e){canMeasure=false}}
+  measureChecked=true;renderDrawings();renderItems();updateTotals();
+  if(user){ROLE.owner=await user.isOwner();ROLE.id=await user.id()}
+  document.getElementById("roleChip").textContent=ROLE.owner?"Owner":"Sales";
+  if(!db){renderRates();updateTotals();renderList();return}
+  ROLE.dbOk=true;
+  db.doc("config/rates").onSnapshot(snap=>{
+    if(snap.exists&&!snap.metadata.hasPendingWrites){const raw=clone(snap.data());const up=upgradeRates(raw);RATES=normRates(raw);if(up&&ROLE.owner)writeRates();
+      if(S.ratesLive){S.set=clone(RATES);if(!document.getElementById("items").contains(document.activeElement))renderItems()}
+      renderRates();updateTotals()}
+  },()=>{});
+  db.collection("quotes").orderBy("updatedAt","desc").limit(300).onSnapshot(snap=>{
+    QUOTES=snap.docs.map(d=>Object.assign({id:d.id},d.data()));renderList();
+  },()=>{QUOTES=[];renderList()});
+  renderRates();updateTotals();renderList();
+}
+renderAll();
+connect();
+
+/* ---------- client quote ---------- */
+function fmtDate(iso){if(!iso)return"";const d=new Date(iso+"T00:00");return d.toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}
+function validUntil(){if(!S.q.date)return"";const d=new Date(S.q.date+"T00:00");d.setDate(d.getDate()+n(S.q.valid));return d.toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}
+const TERMS=["Prices are in Australian dollars. Rates are ex GST, and GST (10%) is added to the total.","Quote is based on the areas measured and site condition at inspection. Changes to scope may change the price.","Client to provide access, power and water on the day unless agreed otherwise.","Some stains and damage may not be fully removable. We will advise on the day.","Hazardous waste (asbestos, chemicals, needles) is excluded.","Cancellations within 24 hours of the booked time may incur a call-out fee.","Rapid Pro Clean holds public liability insurance. Certificate available on request."];
+function buildPaper(){
+  const c=calc();let pn=0;const photos=[];
+  const rows=S.items.filter(isPriced).map(it=>{const nums=it.photos.filter(p=>p.data).map(p=>{pn++;photos.push({p:p.data,n:pn,svc:svcLabel(it.svc)});return pn});
+    return `<tr><td><b>${esc(svcLabel(it.svc))}</b><br><small>${svcOf(it.svc).u==="job"?"Fixed price":`${qtyText(it)} · ${COND[it.cond]} condition`}${nums.length?` · Photos ${nums.join(", ")}`:""}</small>${it.notes?`<br><small>${esc(it.notes)}</small>`:""}</td><td>${money(lineCost(it))}</td></tr>`}).join("");
+  const tot=[["Services",c.job]];
+  if(c.after)tot.push(["After-hours / weekend",c.after]);
+  if(c.travel)tot.push(["Travel",c.travel]);
+  if(c.materials)tot.push(["Materials and equipment",c.materials]);
+  if(c.minAdj)tot.push(["Minimum call-out top-up",c.minAdj]);
+  if(c.disc)tot.push([`Discount (${n(S.adj.disc)}%)`,-c.disc]);
+  tot.push(["Subtotal ex GST",c.ex],["GST (10%)",c.gst]);
+  document.getElementById("paper").innerHTML=`
+  <div class="p-head"><div><h1>Rapid Pro Clean</h1><div style="font-size:14px;margin-top:4px">Cleaning quote · Perth WA</div></div>
+    <div class="meta"><b>Quote ${esc(S.q.no)}</b><br>Date: ${fmtDate(S.q.date)}<br>Valid until: ${validUntil()}${S.q.sales?`<br>Prepared by: ${esc(S.q.sales)}`:""}</div></div>
+  <div class="p-cols">
+    <div><h4>Prepared for</h4><p>${esc(S.q.client)||"—"}${S.q.phone?"\n"+esc(S.q.phone):""}${S.q.email?"\n"+esc(S.q.email):""}</p></div>
+    <div><h4>Site</h4><p>${esc(S.q.site)||"—"}\n${esc(S.q.ptype)}</p></div>
+  </div>
+  <div class="tbl-wrap"><table class="ptable"><thead><tr><th>Scope of work</th><th>Amount</th></tr></thead><tbody>${rows||`<tr><td colspan="2">No services priced yet</td></tr>`}</tbody></table></div>
+  <div class="ptot">${tot.map(([l,v])=>`<div><span>${esc(l)}</span><span>${money(v)}</span></div>`).join("")}<div class="g"><span>Total inc GST</span><span>${money(c.total)}</span></div></div>
+  ${S.adj.clientNotes?`<section><h4>Notes</h4><p style="margin:0;white-space:pre-line">${esc(S.adj.clientNotes)}</p></section>`:""}
+  ${photos.length?`<section><h4>Site photos</h4><div class="pphotos">${photos.map(x=>`<figure><img src="${x.p}" alt="Photo ${x.n}"><figcaption>Photo ${x.n} · ${esc(x.svc)}</figcaption></figure>`).join("")}</div></section>`:""}
+  <section><h4>Terms</h4><ul>${TERMS.map(t=>`<li>${t}</li>`).join("")}</ul></section>
+  <section><h4>Acceptance</h4><div class="sign"><div>Client name</div><div>Signature</div><div>Date</div><div>Preferred start date</div></div></section>`;
+}
+function quoteText(){
+  const c=calc();const L=[];
+  L.push(`RAPID PRO CLEAN — QUOTE ${S.q.no}`,`Date: ${fmtDate(S.q.date)}   Valid until: ${validUntil()}`);
+  if(S.q.client)L.push(`Client: ${S.q.client}`);if(S.q.site)L.push(`Site: ${S.q.site}`);
+  L.push("","SCOPE OF WORK");
+  S.items.filter(isPriced).forEach(it=>{L.push(`- ${svcLabel(it.svc)}: ${svcOf(it.svc).u==="job"?"fixed price":`${qtyText(it)}, ${COND[it.cond]} condition`} — ${money(lineCost(it))}`);if(it.notes)L.push(`  ${it.notes}`)});
+  L.push("");
+  if(c.after)L.push(`After-hours / weekend: ${money(c.after)}`);
+  if(c.travel)L.push(`Travel: ${money(c.travel)}`);
+  if(c.materials)L.push(`Materials and equipment: ${money(c.materials)}`);
+  if(c.minAdj)L.push(`Minimum call-out top-up: ${money(c.minAdj)}`);
+  if(c.disc)L.push(`Discount (${n(S.adj.disc)}%): -${money(c.disc)}`);
+  L.push(`Subtotal ex GST: ${money(c.ex)}`,`GST (10%): ${money(c.gst)}`,`TOTAL INC GST: ${money(c.total)}`);
+  if(S.adj.clientNotes)L.push("","NOTES",S.adj.clientNotes);
+  L.push("","TERMS",...TERMS.map(t=>"- "+t));
+  if(S.q.sales)L.push("",`Prepared by ${S.q.sales}, Rapid Pro Clean`);
+  return L.join("\n");
+}
+</script>
+
+</body></html>
