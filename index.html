@@ -72,7 +72,9 @@ input:focus,select:focus,textarea:focus,button:focus-visible,summary:focus-visib
 .thumb button{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;cursor:pointer;font-size:14px;line-height:1}
 .thumb i{position:absolute;left:3px;bottom:2px;font:600 11px var(--body);font-style:normal;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:0 4px}
 .addphoto{width:76px;height:76px;border:1.5px dashed var(--line);border-radius:8px;display:grid;place-items:center;color:var(--accent);font-size:13px;font-weight:600;text-transform:none;letter-spacing:0;cursor:pointer;text-align:center;line-height:1.2}
-.addphoto input{display:none}
+.addphoto,.upload{position:relative;overflow:hidden}
+.fileov{position:absolute!important;inset:0;width:100%!important;height:100%!important;opacity:0;cursor:pointer;padding:0!important;border:0!important;font-size:200px!important;z-index:2}
+.dropping{outline:3px dashed var(--accent);outline-offset:2px}
 .plist{display:flex;flex-direction:column;gap:10px}
 .prow{display:grid;grid-template-columns:76px 1fr;gap:12px;align-items:start}
 .pinfo{display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -102,6 +104,12 @@ input:focus,select:focus,textarea:focus,button:focus-visible,summary:focus-visib
 .dsum{font-size:14px;font-weight:600}
 .dsum.warn{color:var(--warn)}
 .from-draw{font-size:13px;font-weight:600;color:var(--accent)}
+.upload.solid{background:var(--accent);color:var(--accent-ink)}
+.rchip{display:inline-block;font:600 12px var(--body);padding:3px 9px;border-radius:20px;background:var(--soft);color:var(--ink);margin:2px 4px 0 0}
+.arow-sel{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.arow.win{border-left:3px solid var(--accent);padding-left:8px}
+.dsummary{background:var(--soft);border-radius:8px;padding:10px 12px;font-size:14px;display:flex;flex-direction:column;gap:6px}
+.dsummary b{font:700 17px var(--display)}
 .viewer img{display:block;max-width:100%;margin:0 auto;background:#fff;border-radius:6px}
 @media (max-width:520px){.dpage{grid-template-columns:1fr}.dthumb img{max-height:240px;object-fit:contain}}
 .zone{background:var(--soft);border-radius:8px;padding:10px 12px;font-size:15px}
@@ -221,10 +229,18 @@ details[open].card summary::after{content:"−"}
   </section>
 
   <section class="card" id="drawCard">
-    <div class="sec-head"><h2>Building drawings (builders clean)</h2><span id="drawCount"></span></div>
+    <div class="sec-head"><h2>Building drawings</h2><span id="drawCount"></span></div>
     <p class="hint" style="margin:0" id="drawHint"></p>
+    <div class="dsummary" id="drawSummary" hidden></div>
     <div id="drawings" style="display:flex;flex-direction:column;gap:14px"></div>
-    <label class="btn ghost wide upload">+ Add drawing (PDF or image)<input type="file" accept="application/pdf,.pdf,image/*" multiple data-act="drawing" hidden></label>
+    <label class="btn ghost wide upload">+ Add drawing (PDF or image)<input class="fileov" type="file" accept="application/pdf,.pdf,image/*" multiple data-file="drawing" aria-label="Add drawing, PDF or image"></label>
+  </section>
+
+  <section class="card" id="scanCard">
+    <div class="sec-head"><h2>Scan rooms with photos</h2><span id="scanCount"></span></div>
+    <p class="hint" style="margin:0" id="scanHint"></p>
+    <div id="scans" class="plist"></div>
+    <label class="btn wide upload solid">+ Take or add room photos<input class="fileov" type="file" accept="image/*" multiple data-file="scan" aria-label="Take or add room photos"></label>
   </section>
 
   <section style="display:flex;flex-direction:column;gap:12px">
@@ -236,9 +252,10 @@ details[open].card summary::after{content:"−"}
   <section class="card">
     <h2>Travel</h2>
     <div class="grid">
-      <label>Distance from base, one way (km)<input id="f-km" type="number" inputmode="decimal" data-k="travel.km"></label>
+      <label>Distance from Perth CBD, one way (km)<input id="f-km" type="number" inputmode="decimal" data-k="travel.km"></label>
       <label>Parking (CBD, paid bays)<input id="f-park" type="number" inputmode="decimal" data-k="travel.parking"></label>
     </div>
+    <div class="actions"><button class="btn small ghost" data-act="est-km" id="estKmBtn" hidden>Estimate km from site address</button><span class="hint" id="kmNote"></span></div>
     <div class="zone" id="zoneInfo"></div>
   </section>
 
@@ -261,6 +278,7 @@ details[open].card summary::after{content:"−"}
   <section class="card">
     <h2>Price breakdown</h2>
     <table class="sum" id="sumTable"></table>
+    <div class="hint" id="bcCheck" hidden></div>
   </section>
 
   <details class="card" id="ratesBox">
@@ -280,20 +298,25 @@ details[open].card summary::after{content:"−"}
       <label>Medium<input id="s-cm" class="rate-in" type="number" step="0.05" data-k="R.cond.m"></label>
       <label>Heavy<input id="s-ch" class="rate-in" type="number" step="0.05" data-k="R.cond.h"></label>
     </div>
-    <h3>Travel zones (one-way km from base)</h3>
+    <h3>Builders clean large-area rate</h3>
+    <p class="hint" style="margin:0">Applied automatically to the Builders clean lines once the quote's total builders clean area is over each size. Set a multiplier to 1 to switch it off.</p>
     <div class="rates">
-      <label>Zone 1 up to km<input id="s-z0t" class="rate-in" type="number" data-k="R.zones.0.to"></label>
-      <label>Zone 1 fee $<input id="s-z0f" class="rate-in" type="number" data-k="R.zones.0.fee"></label>
-      <label>Zone 2 up to km<input id="s-z1t" class="rate-in" type="number" data-k="R.zones.1.to"></label>
-      <label>Zone 2 fee $<input id="s-z1f" class="rate-in" type="number" data-k="R.zones.1.fee"></label>
-      <label>Zone 3 up to km<input id="s-z2t" class="rate-in" type="number" data-k="R.zones.2.to"></label>
-      <label>Zone 3 fee $<input id="s-z2f" class="rate-in" type="number" data-k="R.zones.2.fee"></label>
-      <label>Beyond zone 3, $ per km (return)<input id="s-perkm" class="rate-in" type="number" step="0.05" data-k="R.perKm"></label>
+      <label>Mid size: over (m²)<input id="s-vt1" class="rate-in" type="number" data-k="R.vol.t1"></label>
+      <label>Mid size multiplier<input id="s-vmid" class="rate-in" type="number" step="0.01" data-k="R.vol.mid"></label>
+      <label>Large: over (m²)<input id="s-vt2" class="rate-in" type="number" data-k="R.vol.t2"></label>
+      <label>Large multiplier<input id="s-vbig" class="rate-in" type="number" step="0.01" data-k="R.vol.big"></label>
+      <label>Crew productivity (m² per crew hour)<input id="s-prod" class="rate-in" type="number" data-k="R.prod"></label>
+    </div>
+    <h3>Travel</h3>
+    <div class="rates">
+      <label>No travel charge within (km of Perth CBD)<input id="s-freekm" class="rate-in" type="number" data-k="R.freeKm"></label>
+      <label>$ per km beyond that (charged both ways)<input id="s-perkm" class="rate-in" type="number" step="0.05" data-k="R.perKm"></label>
     </div>
     <h3>Other</h3>
     <div class="rates">
       <label>After-hours surcharge %<input id="s-after" class="rate-in" type="number" data-k="R.afterPct"></label>
       <label>Minimum call-out, $ ex GST<input id="s-min" class="rate-in" type="number" data-k="R.minCharge"></label>
+      <label>Chemicals and consumables %<input id="s-matpct" class="rate-in" type="number" step="0.5" data-k="R.matPct"></label>
       <label>Max discount for sales staff %<input id="s-maxdisc" class="rate-in" type="number" data-k="R.maxDisc"></label>
     </div>
   </details>
@@ -341,6 +364,7 @@ const SVC=[
   {k:"High pressure cleaning",u:"m2",sec:"m2",d:5,m:"the hard outdoor surface to be pressure cleaned (driveway, paving, patio, path or wall)"},
   {k:"Window cleaning",label:"Internal window cleaning (m² of glass)",u:"m2",sec:"m2",d:6,m:"the area of window glass, one side only"},
   {k:"External window cleaning",label:"External window cleaning (m² of glass)",u:"m2",sec:"m2",d:8,m:"the area of window glass, one side only"},
+  {k:"Repeat external window cleaning",label:"External window cleaning – repeat clean (m² of glass)",u:"m2",sec:"m2",d:5,m:"the area of window glass, one side only"},
   {k:"Carpet cleaning",label:"Carpet cleaning (steam)",u:"m2",sec:"m2",d:3.5,m:"the carpeted floor area only"},
   {k:"Bonnet pad carpet cleaning",u:"m2",sec:"m2",d:2.75,m:"the carpeted floor area only"},
   {k:"Tile and grout cleaning",u:"m2",sec:"m2",d:4,m:"the tiled area (floor and any tiled walls shown)"},
@@ -367,7 +391,7 @@ const qnum=()=>{const d=new Date();return "RP-"+String(d.getFullYear()).slice(2)
 
 function defaultRates(){
   const rates={};SVC.forEach(s=>{if(s.u!=="job")rates[s.k]=s.d});
-  return {ver:RATE_VER,rates,cond:{l:1,m:1.25,h:1.5},zones:[{to:15,fee:0},{to:30,fee:25},{to:50,fee:45}],perKm:1.2,afterPct:20,minCharge:180,maxDisc:10};
+  return {ver:RATE_VER,rates,cond:{l:1,m:1.25,h:1.5},zones:[{to:15,fee:0},{to:30,fee:25},{to:50,fee:45}],perKm:1.2,freeKm:30,matPct:4,afterPct:20,minCharge:180,maxDisc:10,vol:{t1:500,mid:0.95,t2:1500,big:0.9},prod:15};
 }
 /* One-off update of an older saved rate card to the Perth 2026 rates. Only used for the live rate card, never for saved quotes. */
 function upgradeRates(raw){
@@ -376,7 +400,7 @@ function upgradeRates(raw){
   if(!n(raw.minCharge))raw.minCharge=180;
   raw.ver=RATE_VER;return true;
 }
-function normRates(r){const d=defaultRates();r=Object.assign(d,r||{});r.rates=Object.assign(defaultRates().rates,r.rates||{});r.cond=Object.assign(defaultRates().cond,r.cond||{});
+function normRates(r){const d=defaultRates();r=Object.assign(d,r||{});r.rates=Object.assign(defaultRates().rates,r.rates||{});r.cond=Object.assign(defaultRates().cond,r.cond||{});r.vol=Object.assign(defaultRates().vol,r.vol||{});if(!(n(r.prod)>0))r.prod=defaultRates().prod;
   if(!Array.isArray(r.zones)||r.zones.length<3)r.zones=defaultRates().zones;return r}
 
 let RATES=defaultRates();
@@ -389,7 +413,7 @@ function blankQuote(){
   return {qid:null,example:false,ratesLive:true,dirty:false,status:"Draft",createdBy:null,createdAt:null,
     q:{no:qnum(),date:today(),valid:30,client:"",phone:"",email:"",site:"",ptype:"Residential house",sales:"",access:""},
     items:[{id:uid(),svc:"General cleaning",area:"",L:"",W:"",cond:"m",price:"",notes:"",photos:[]}],
-    drawings:[],travel:{km:"",parking:""},mat:{pct:8,extras:[]},adj:{after:false,disc:"",clientNotes:""},set:clone(RATES),removedPhotos:[]};
+    drawings:[],scans:[],travel:{km:"",parking:""},mat:{pct:(+RATES.matPct||4),extras:[]},adj:{after:false,disc:"",clientNotes:""},set:clone(RATES),removedPhotos:[]};
 }
 function exampleQuote(){
   const s=blankQuote();s.example=true;
@@ -398,30 +422,33 @@ function exampleQuote(){
            {id:uid(),svc:"External window cleaning",area:42,L:"",W:"",cond:"h",price:"",notes:"Outside of all windows and frames. Single storey.",photos:[]},
            {id:uid(),svc:"High pressure cleaning",area:60,L:"",W:"",cond:"m",price:"",notes:"Driveway, exposed aggregate.",photos:[]},
            {id:uid(),svc:"Rubbish removal",area:"",L:"",W:"",cond:"m",price:180,notes:"Builder's offcuts and packaging, one trailer load.",photos:[]}];
-  s.travel={km:38,parking:0};
-  s.mat={pct:8,extras:[]};
+  s.travel={km:45,parking:0};
+  s.mat={pct:4,extras:[]};
   s.adj.clientNotes="Builders clean includes removal of paint and cement residue from floors, internal window cleaning, stickers from glass, and a full dust-down of all surfaces.";
   return s;
 }
 function normQuote(s){
+  const legacyVol=!!(s&&s.set&&!s.set.vol);
   const b=blankQuote();s=Object.assign(b,s||{});
   s.q=Object.assign(blankQuote().q,s.q||{});s.set=normRates(s.set);
+  if(legacyVol)s.set.vol=Object.assign({},s.set.vol,{mid:1,big:1});
   s.items=(s.items||[]).map(it=>Object.assign({id:uid(),svc:"General cleaning",area:"",L:"",W:"",cond:"m",price:"",notes:""},it,{photos:(it.photos||[]).map(p=>typeof p==="string"?{pid:"p"+uid(),data:p,saved:false}:p)}));
-  s.mat=Object.assign({pct:8,extras:[]},s.mat||{});s.adj=Object.assign({after:false,disc:"",clientNotes:""},s.adj||{});
+  s.mat=Object.assign({pct:4,extras:[]},s.mat||{});s.adj=Object.assign({after:false,disc:"",clientNotes:""},s.adj||{});
   s.items.forEach(it=>it.photos.forEach(p=>{if(p.estState==="measuring"||p.estState==="queued")p.estState=""}));
-  s.drawings=(s.drawings||[]).map(d=>Object.assign({id:"d"+uid(),name:"Drawing",err:""},d,{loading:false,pages:(d.pages||[]).map(pg=>Object.assign({areas:[],total:null,note:"",data:""},pg,{state:pg.state==="done"?"done":(pg.state==="error"?"error":"")}))}));
+  s.drawings=(s.drawings||[]).map(d=>Object.assign({id:"d"+uid(),name:"Drawing",err:""},d,{loading:false,pages:(d.pages||[]).map(pg=>Object.assign({areas:[],total:null,note:"",data:"",text:""},pg,{state:pg.state==="done"?"done":(pg.state==="error"?"error":"")}))}));
+  s.scans=(s.scans||[]).map(sc=>Object.assign({sid:"s"+uid(),data:"",results:[],room:"",note:""},sc,{state:sc.state==="scanning"||sc.state==="queued"?"":(sc.state||"")}));
   s.removedPhotos=s.removedPhotos||[];if(!STATUSES.includes(s.status))s.status="Draft";
   return s;
 }
-try{const raw=localStorage.getItem(KEY);S=raw?normQuote(JSON.parse(raw)):null}catch(e){S=null}
-if(!S)S=exampleQuote();
+try{const raw=localStorage.getItem(KEY);const j=raw?JSON.parse(raw):null;S=j&&!j.example?normQuote(j):null}catch(e){S=null}
+if(!S)S=blankQuote();
 if(S.ratesLive)S.set=clone(RATES);
 
 /* ---------- local draft (this phone) ---------- */
 let saveTimer;
 function saveLocal(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{
   try{localStorage.setItem(KEY,JSON.stringify(S))}
-  catch(e){try{const lite=clone(S);lite.items.forEach(i=>i.photos=i.photos.filter(p=>p.saved).map(p=>Object.assign({},p,{data:""})));lite.drawings.forEach(d=>d.pages.forEach(pg=>{if(pg.saved)pg.data="";else pg.data=""}));localStorage.setItem(KEY,JSON.stringify(lite))}catch(e2){}}
+  catch(e){try{const lite=clone(S);lite.items.forEach(i=>i.photos=i.photos.filter(p=>p.saved).map(p=>Object.assign({},p,{data:""})));lite.drawings.forEach(d=>d.pages.forEach(pg=>{pg.data=""}));lite.scans.forEach(sc=>{sc.data=""});localStorage.setItem(KEY,JSON.stringify(lite))}catch(e2){}}
 },300)}
 function touch(){S.dirty=true;S.example=S.example&&true;saveLocal();updateSaveNote()}
 
@@ -435,21 +462,28 @@ function setPath(p,v){const [o,k]=root(p);const ks=k.split(".");let t=o;ks.slice
 /* ---------- pricing ---------- */
 /* A service is priced only when it has a size: m² typed in, or m² measured from its photos (or a job price / seat count). Anything else stays blank. */
 function sumEst(it){return +it.photos.reduce((a,p)=>a+(n(p.est)>0?n(p.est):0),0).toFixed(1)}
-function usesPhotoArea(it){return svcOf(it.svc).u==="m2"&&!(n(it.area)>0)&&sumEst(it)>0}
-function areaOf(it){return usesPhotoArea(it)?sumEst(it):n(it.area)}
+function usesPhotoArea(it){return svcOf(it.svc).u==="m2"&&sumEst(it)>0}
+function areaOf(it){return +(n(it.area)+(usesPhotoArea(it)?sumEst(it):0)).toFixed(1)}
 function isPriced(it){const s=svcOf(it.svc);return s.u==="job"?n(it.price)>0:areaOf(it)>0}
 function isMeasuring(it){return it.photos.some(p=>p.estState==="measuring"||p.estState==="queued")}
-function lineCost(it){if(!isPriced(it))return 0;if(svcOf(it.svc).u==="job")return n(it.price);return areaOf(it)*n(S.set.rates[it.svc])*n(S.set.cond[it.cond]||1)}
+/* Builders clean large-area rate: the per-m² price steps down once the quote's total builders clean area passes each size on the rate card. */
+function bcArea(){return S.items.reduce((a,it)=>a+(it.svc==="Builders clean"&&isPriced(it)?areaOf(it):0),0)}
+/* Stepping up a size never makes a bigger job cheaper than a smaller one: the factor eases in until the full discount applies. */
+function volFactor(){const v=S.set.vol||{},a=bcArea(),t1=n(v.t1),t2=n(v.t2),mid=n(v.mid)||1,big=n(v.big)||1;let f=1;
+  if(t2>0&&a>t2)f=Math.max(big,(t1>0&&t2>t1?mid:1)*t2/a);else if(t1>0&&a>t1)f=Math.max(mid,t1/a);
+  return +Math.min(1,f).toFixed(3)}
+function lineCost(it){if(!isPriced(it))return 0;if(svcOf(it.svc).u==="job")return n(it.price);return areaOf(it)*n(S.set.rates[it.svc])*n(S.set.cond[it.cond]||1)*(it.svc==="Builders clean"?volFactor():1)}
 function qtyText(it){const s=svcOf(it.svc),q=areaOf(it);
   if(s.u==="job")return "Fixed job price";
   if(s.u==="item")return `${q} ${q===1?s.one:s.many}`;
-  return usesPhotoArea(it)?`approx. ${q} m² (measured from photos)`:`${q} m²`}
+  if(!usesPhotoArea(it))return `${q} m²`;
+  return n(it.area)>0?`${q} m² (${n(it.area)} m² measured + approx. ${sumEst(it)} m² from photos)`:`approx. ${q} m² (measured from photos)`}
+/* Travel is only charged for the distance beyond the free radius from Perth CBD, both ways. */
 function travelCalc(){
-  const km=n(S.travel.km),z=S.set.zones;let fee=0,label="";
-  if(!km){label="Enter distance to work out travel."}
-  else{let f=-1;for(let i=0;i<z.length;i++){if(km<=n(z[i].to)){f=i;break}}
-    if(f>=0){fee=n(z[f].fee);label=`Zone ${f+1} (up to ${n(z[f].to)} km): ${fee?money(fee):"no travel charge"}`}
-    else{fee=km*2*n(S.set.perKm);label=`Beyond zone 3: ${km} km × 2 × ${money(n(S.set.perKm))}/km = ${money(fee)}`}}
+  const km=n(S.travel.km),free=n(S.set.freeKm)||30,rate=n(S.set.perKm);let fee=0,label="";
+  if(!km)label=`Enter the distance from Perth CBD. There's no travel charge within ${free} km.`;
+  else if(km<=free)label=`${km} km from Perth CBD: within ${free} km, so no travel charge.`;
+  else{const extra=+(km-free).toFixed(1);fee=extra*2*rate;label=`${km} km from Perth CBD: ${extra} km beyond ${free} km × 2 (there and back) × ${money(rate)}/km = ${money(fee)}`}
   return {fee,label,parking:n(S.travel.parking)};
 }
 function calc(){
@@ -469,30 +503,35 @@ function calc(){
 }
 
 /* ---------- rendering: quote form ---------- */
+function condHint(it){
+  if(it.svc==="Builders clean")return `<div class="hint">Start at Light for new fit-outs and final cleans. Use Medium only when photos or a site visit show heavy dust, paint or plaster on most surfaces. Jobs over ${n(S.set.vol.t1)} m² get the large-area rate automatically.</div>`;
+  if(it.svc==="External window cleaning")return `<div class="hint">Glass after construction: Medium at most. For a second clean of the same glass, use the repeat clean service.</div>`;
+  return "";
+}
 function itemFields(it){
   const sv=svcOf(it.svc);
-  if(it.src==="drawing")return `<div class="from-draw">From the building drawing: ${n(it.area)} m²</div>
+  if(it.src==="drawing")return `<div class="from-draw">From the building drawing: ${n(it.area)} m²${/window/i.test(it.svc)?" of glass":""}</div>
     <div class="hint">Change rooms, m² and services in Building drawings above.</div>
     <div><div class="hint" style="margin-bottom:4px">Condition</div>
-      <div class="seg" role="radiogroup">${Object.entries(COND).map(([k,v])=>`<label><input type="radio" name="c-${it.id}" value="${k}" data-f="cond"${it.cond===k?" checked":""}><span>${v} ×${n(S.set.cond[k])}</span></label>`).join("")}</div></div>`;
+      <div class="seg" role="radiogroup">${Object.entries(COND).map(([k,v])=>`<label><input type="radio" name="c-${it.id}" value="${k}" data-f="cond"${it.cond===k?" checked":""}><span>${v} ×${n(S.set.cond[k])}</span></label>`).join("")}</div></div>${condHint(it)}`;
   if(sv.u==="job")return `<label>Job price, ex GST ($)<input id="i-${it.id}-price" type="number" inputmode="decimal" data-f="price" value="${esc(it.price)}" placeholder="0"></label>
     <div class="hint">Price the whole job. GST is added at the end of the quote.</div>`;
   const cond=`<div><div class="hint" style="margin-bottom:4px">Condition</div>
       <div class="seg" role="radiogroup">${Object.entries(COND).map(([k,v])=>`<label><input type="radio" name="c-${it.id}" value="${k}" data-f="cond"${it.cond===k?" checked":""}><span>${v} ×${n(S.set.cond[k])}</span></label>`).join("")}</div></div>`;
   if(sv.u==="item")return `<label>${sv.qty}<input id="i-${it.id}-area" type="number" inputmode="numeric" data-f="area" value="${esc(it.area)}" placeholder="0"></label>${cond}`;
   const glass=/window/i.test(it.svc)?" of glass":"";
-  return `<label>Measured area (m²${glass})<input id="i-${it.id}-area" type="number" inputmode="decimal" data-f="area" value="${esc(it.area)}" placeholder="Leave blank to use photos"></label>
-    <div class="hint">Type the m² if you measured it. Leave it blank and add photos below to have each photo measured.</div>
+  return `<label>Measured area (m²${glass})<input id="i-${it.id}-area" type="number" inputmode="decimal" data-f="area" value="${esc(it.area)}" placeholder="0"></label>
+    <div class="hint">Type the m² you measured, and/or add photos below. Typed m² and the m² from each photo are added together for this service.</div>
     <div class="lw">
       <label>Length (m)<input id="i-${it.id}-L" type="number" inputmode="decimal" data-f="L" value="${esc(it.L)}"></label><span>×</span>
       <label>Width (m)<input id="i-${it.id}-W" type="number" inputmode="decimal" data-f="W" value="${esc(it.W)}"></label>
       <button class="btn small ghost" data-act="lw">Add to area</button>
-    </div>${cond}`;
+    </div>${cond}${condHint(it)}`;
 }
 function photoHtml(it){
   const m2=svcOf(it.svc).u==="m2";
   const thumb=(p,pi)=>`<div class="thumb"><img src="${p.data}" alt="Site photo ${pi+1} for ${esc(svcLabel(it.svc))}"><i>${pi+1}</i><button data-act="del-photo" data-pi="${pi}" aria-label="Remove photo">×</button></div>`;
-  const add=`<label class="addphoto">+ Photo<input type="file" accept="image/*" multiple data-act="photo"></label>`;
+  const add=`<label class="addphoto">+ Photo<input class="fileov" type="file" accept="image/*" multiple data-file="photo" data-iid="${it.id}" aria-label="Add photos for ${esc(svcLabel(it.svc))}"></label>`;
   if(!m2)return `<div class="hint" style="margin-bottom:6px">Photos</div><div class="photos">${it.photos.map((p,pi)=>p.data?thumb(p,pi):"").join("")}${add}</div>`;
   const hint=canMeasure
     ?"Take one photo per area. Each photo is measured, and the m² from all photos are added together and priced for this service. Check each m² and correct it if it looks wrong."
@@ -509,10 +548,12 @@ function photoHtml(it){
       <div class="pest"><input id="pe-${esc(p.pid)}" type="number" inputmode="decimal" data-pest="${pi}" value="${esc(p.est)}" placeholder="m²" aria-label="Area in photo ${pi+1}, m²"><span>m²</span>${conf}</div>
       ${status}${again?`<div>${again}</div>`:""}</div></div>`}).join("");
   const k=it.photos.filter(p=>p.data).length;
-  const tot=k?`<div class="dsum">Total from ${k} ${k===1?"photo":"photos"}: ${sumEst(it)} m²${n(it.area)>0?` (not used, because the measured area typed above is used instead)`:""}</div>`:"";
+  const tot=k?`<div class="dsum">Total from ${k} ${k===1?"photo":"photos"}: ${sumEst(it)} m²${n(it.area)>0?` + ${n(it.area)} m² typed above = ${areaOf(it)} m² priced`:""}</div>`:"";
   return `<div class="hint" style="margin-bottom:6px">Photos of the area</div><p class="photo-hint">${hint}</p><div class="plist">${rows}${tot}<div>${add}</div></div>`;
 }
-function refreshPhotos(it){const box=document.getElementById("ph-"+it.id);if(!box||box.contains(document.activeElement))return;box.innerHTML=photoHtml(it)}
+function refreshPhotos(it){const box=document.getElementById("ph-"+it.id);if(!box||box.contains(document.activeElement))return;box.innerHTML=photoHtml(it);bindFileInputs()}
+let itemsPending=false;
+function safeRenderItems(){const box=document.getElementById("items");if(box.contains(document.activeElement)&&document.activeElement.tagName!=="BUTTON"){itemsPending=true;return}itemsPending=false;renderItems()}
 function renderItems(){
   const box=document.getElementById("items");
   box.innerHTML=S.items.map((it,idx)=>`
@@ -527,6 +568,7 @@ function renderItems(){
     <div class="line-total" id="lt-w-${it.id}"><span id="lt-d-${it.id}"></span><b id="lt-${it.id}"></b></div>
   </div>`).join("");
   document.getElementById("itemCount").textContent=S.items.length+(S.items.length===1?" service":" services");
+  bindFileInputs();
 }
 function renderExtras(){
   document.getElementById("extras").innerHTML=S.mat.extras.map(e=>`
@@ -566,8 +608,9 @@ function updateTotals(){
     if(!d)return;const u=svcOf(it.svc).u;
     document.getElementById("lt-w-"+it.id).classList.toggle("unpriced",!isPriced(it));
     if(!isPriced(it)){t.textContent=money(0);
-      d.textContent=isMeasuring(it)?"Measuring photos…":u==="job"?"$0 until you enter the job price.":u==="item"?"$0 until you enter the number of seats.":"$0 until you type the m² or add photos of the area.";return}
-    d.textContent=u==="job"?"Fixed job price, ex GST":`${qtyText(it)} × ${money(n(S.set.rates[it.svc]))} × ${n(S.set.cond[it.cond])}`;t.textContent=money(lineCost(it))});
+      d.textContent=isMeasuring(it)?"Measuring photos…":u==="job"?"$0 until you enter the job price.":u==="item"?"$0 until you enter the number of seats.":"$0.00 — type the m² or add photos of the area.";return}
+    const vf=it.svc==="Builders clean"?volFactor():1;
+    d.textContent=u==="job"?"Fixed job price, ex GST":`${qtyText(it)} × ${money(n(S.set.rates[it.svc]))} × ${n(S.set.cond[it.cond])}${vf!==1?` × ${vf} large-area rate`:""}`;t.textContent=money(lineCost(it))});
   document.getElementById("zoneInfo").textContent=c.t.label;
   document.getElementById("afterPctLabel").textContent=`(+${n(S.set.afterPct)}% on job cost)`;
   document.getElementById("discHint").textContent=ROLE.owner?"":`Up to ${n(RATES.maxDisc)}%. Larger discounts need the owner.`;
@@ -581,15 +624,19 @@ function updateTotals(){
   if(c.disc)rows.push([`Discount (${n(S.adj.disc)}%)`,-c.disc]);
   rows.push(["Total ex GST",c.ex],["GST (10%)",c.gst,"sub"]);
   document.getElementById("sumTable").innerHTML=c.empty
-    ?`<tr class="sub"><td colspan="2">No services priced yet. Type the m² or add a photo of the area to at least one service.</td></tr><tr class="grand"><td>Total inc GST</td><td>${money(0)}</td></tr>`
+    ?`<tr class="sub"><td colspan="2">No services priced yet. Type the m², or add photos or a drawing, to start building the quote.</td></tr><tr class="grand"><td>Total inc GST</td><td>${money(0)}</td></tr>`
     :rows.map(([l,v,cl])=>`<tr class="${cl||""}"><td>${esc(l)}</td><td>${money(v)}</td></tr>`).join("")+`<tr class="grand"><td>Total inc GST</td><td>${money(c.total)}</td></tr>`;
+  const bc=document.getElementById("bcCheck"),bca=bcArea(),prod=n(S.set.prod)||15;
+  if(bca>0){const hrs=bca/prod*1.1,bcCost=S.items.reduce((a,it)=>a+(it.svc==="Builders clean"?lineCost(it):0),0);
+    bc.hidden=false;bc.textContent=`Crew check: ${+bca.toFixed(1)} m² of builders clean at ${prod} m² per crew hour, plus 10% supervision, is about ${Math.round(hrs)} hours (${(hrs/(4*7.6)).toFixed(1)} days for 4 cleaners). That works out to ${money(bcCost/hrs)} per crew hour. Above about $90 an hour you have room to sharpen; below about $55 you may not cover wages and overheads.`}
+  else bc.hidden=true;
   document.getElementById("barTotal").textContent=money(c.empty?0:c.total);
   document.getElementById("qnoLabel").textContent=`Quote ${S.q.no}`;
   document.getElementById("exampleBanner").hidden=!S.example;
   document.getElementById("ratesBanner").hidden=S.ratesLive||JSON.stringify(normRates(S.set))===JSON.stringify(normRates(RATES));
   updateSaveNote();
 }
-function renderAll(){renderDrawings();renderItems();renderExtras();renderRates();bindFields();updateTotals()}
+function renderAll(){renderDrawings();renderScans();renderItems();renderExtras();renderRates();bindFields();updateTotals()}
 
 /* ---------- rendering: saved quotes ---------- */
 let filter="All",search="";
@@ -629,27 +676,52 @@ document.addEventListener("input",ev=>{
     setPath(el.dataset.k,el.type==="checkbox"?el.checked:el.value);touch();updateTotals();return}
   const card=el.closest("[data-item]");
   const ar=el.closest("[data-area]");
-  if(ar&&el.dataset.af){const a=findArea(ar.dataset.area);if(a){a[el.dataset.af]=el.value;syncDrawingItems();renderItems();updateTotals();updateDrawSums();touch()}return}
+  if(ar&&el.dataset.af){const a=findArea(ar.dataset.area);if(a){a[el.dataset.af]=el.value;if(el.dataset.af==="rtype"&&el.value==="outdoor"&&a.kind!=="window"){a.svc="";const sel=ar.querySelector('[data-af="svc"]');if(sel)sel.value=""}
+    syncDrawingItems();safeRenderItems();updateTotals();updateDrawSums();touch()}return}
   if(card&&el.dataset.pest!==undefined){const it=S.items.find(i=>i.id===card.dataset.item);const p=it&&it.photos[+el.dataset.pest];
     if(p){p.est=el.value;p.estState="edited";touch();updateTotals()}return}
   if(card&&el.dataset.f){const it=S.items.find(i=>i.id===card.dataset.item);
     if(el.dataset.f==="svc"&&svcOf(it.svc).u!==svcOf(el.value).u){it.area="";it.L="";it.W="";it.price=""}
     it[el.dataset.f]=el.value;
+    if(el.dataset.f==="svc"&&el.value==="Builders clean")it.cond="l";
     if(el.dataset.f==="svc"){renderItems();const sel=document.getElementById("i-"+it.id+"-svc");sel&&sel.focus()}
     touch();updateTotals();return}
   const ex=el.closest("[data-extra]");
   if(ex&&el.dataset.ef){const e=S.mat.extras.find(x=>x.id===ex.dataset.extra);e[el.dataset.ef]=el.value;touch();updateTotals()}
 });
-document.addEventListener("change",async ev=>{
-  const el=ev.target;
-  if(el.dataset.act==="drawing"){const files=[...el.files];el.value="";for(const f of files)await addDrawing(f);return}
-  if(el.dataset.act==="photo"){const it=S.items.find(i=>i.id===el.closest("[data-item]").dataset.item);
-    const added=[];
-    for(const f of el.files){const d=await shrink(f);if(d){const p={pid:"p"+Date.now().toString(36)+uid(),data:d,saved:false,est:"",estState:""};it.photos.push(p);added.push(p)}}
-    el.value="";
-    if(svcOf(it.svc).u==="m2"&&canMeasure)added.forEach(p=>queueMeasure(it,p));
-    renderItems();updateTotals();touch()}
-});
+/* File pickers: each input gets its own handler (re-bound after every render), so a picked file is never lost
+   if the list re-draws while the phone's picker is open. */
+let busyFiles=0;
+async function onFiles(el){
+  const files=[...(el.files||[])];const kind=el.dataset.file,iid=el.dataset.iid;el.value="";
+  if(!files.length)return;
+  await addFiles(kind,files,iid);
+}
+async function addFiles(kind,files,iid){
+  busyFiles++;toast(kind==="drawing"?`Opening ${files.length===1?"drawing":files.length+" drawings"}…`:`Adding ${files.length===1?"photo":files.length+" photos"}…`);
+  let bad=0;
+  try{
+    if(kind==="drawing"){for(const f of files)await addDrawing(f);return}
+    if(kind==="scan"){
+      for(const f of files){const d=await shrink(f);if(!d){bad++;continue}const sc={sid:"s"+Date.now().toString(36)+uid(),data:d,state:"",room:"",note:"",results:[]};S.scans.push(sc);if(canMeasure)queueScan(sc)}
+      if(!canMeasure&&files.length>bad)toast("Photo measuring isn't available here. Add services below and type the m².");
+      renderScans();touch();return}
+    if(kind==="photo"){
+      const it=S.items.find(i=>i.id===iid);if(!it){toast("That service was removed. Add the photo again.");return}
+      const added=[];
+      for(const f of files){const d=await shrink(f);if(!d){bad++;continue}const p={pid:"p"+Date.now().toString(36)+uid(),data:d,saved:false,est:"",estState:""};it.photos.push(p);added.push(p)}
+      if(svcOf(it.svc).u==="m2"&&canMeasure)added.forEach(p=>queueMeasure(it,p));
+      renderItems();updateTotals();touch()}
+  }catch(e){toast("Couldn't add that file. Try again, or use a JPG, PNG or PDF.")}
+  finally{busyFiles--;if(bad)setTimeout(()=>toast(`${bad===1?"One photo":bad+" photos"} couldn't be opened. Use JPG or PNG (on iPhone: Settings › Camera › Formats › Most Compatible).`),2300)}
+}
+function bindFileInputs(){document.querySelectorAll("input[data-file]").forEach(el=>{el.onchange=()=>onFiles(el)})}
+/* Desktop: drop files onto the drawings, room photos, or a service card */
+document.addEventListener("dragover",ev=>{const z=ev.target.closest&&ev.target.closest("#drawCard,#scanCard,[data-item]");if(z){ev.preventDefault();z.classList.add("dropping")}});
+document.addEventListener("dragleave",ev=>{const z=ev.target.closest&&ev.target.closest(".dropping");if(z&&!z.contains(ev.relatedTarget))z.classList.remove("dropping")});
+document.addEventListener("drop",ev=>{const z=ev.target.closest&&ev.target.closest("#drawCard,#scanCard,[data-item]");if(!z)return;ev.preventDefault();z.classList.remove("dropping");
+  const files=[...(ev.dataTransfer&&ev.dataTransfer.files||[])];if(!files.length)return;
+  if(z.id==="drawCard")addFiles("drawing",files);else if(z.id==="scanCard")addFiles("scan",files.filter(f=>/^image\//.test(f.type)));else addFiles("photo",files.filter(f=>/^image\//.test(f.type)),z.dataset.item)});
 let armed=null,openArmed=null;
 function arm(b,label,orig){if(armed===b)return true;armed=b;b.textContent=label;setTimeout(()=>{if(armed===b){armed=null;b.textContent=orig}},4000);return false}
 document.addEventListener("click",ev=>{
@@ -658,7 +730,7 @@ document.addEventListener("click",ev=>{
   if(act==="tab")showTab(b.dataset.tab);
   if(act==="add-item"){S.items.push({id:uid(),svc:"General cleaning",area:"",L:"",W:"",cond:"m",price:"",notes:"",photos:[]});renderItems();updateTotals();touch();
     const last=document.querySelector("#items .item:last-child select");last&&last.focus()}
-  if(act==="del-item"&&it.src==="drawing"){allAreas().forEach(a=>{if(a.svc===it.svc)a.svc=""});syncDrawingItems();renderDrawings();renderItems();updateTotals();touch();toast("Removed. Those areas are now set to Don't quote.");return}
+  if(act==="del-item"&&it.src==="drawing"){allAreas().forEach(a=>{if(a.svc===it.svc)a.svc="";else if(a.svc==="both")a.svc=it.svc==="Window cleaning"?"External window cleaning":"Window cleaning"});syncDrawingItems();renderDrawings();renderItems();updateTotals();touch();toast("Removed. Those areas are now set to Don't quote.");return}
   if(act==="del-item"){it.photos.filter(p=>p.saved).forEach(p=>S.removedPhotos.push(p.pid));S.items=S.items.filter(i=>i!==it);renderItems();updateTotals();touch()}
   if(act==="lw"){const a=n(it.L)*n(it.W);if(a>0){it.area=+(n(it.area)+a).toFixed(2);it.L="";it.W="";renderItems();updateTotals();touch();toast(`Added ${+a.toFixed(2)} m²`)}else toast("Enter length and width first")}
   if(act==="del-drawing"){const d=S.drawings.find(x=>x.id===b.closest("[data-draw]").dataset.draw);
@@ -666,7 +738,12 @@ document.addEventListener("click",ev=>{
     if(d){d.pages.forEach(pg=>{if(pg.saved)S.removedPhotos.push(pg.pid)});S.drawings=S.drawings.filter(x=>x!==d);syncDrawingItems();renderDrawings();renderItems();updateTotals();touch()}}
   if(act==="read-page"){const d=S.drawings.find(x=>x.id===b.closest("[data-draw]").dataset.draw);const pg=d&&d.pages[+b.dataset.pi];if(pg&&canMeasure){queueRead(d,pg);renderDrawings()}}
   if(act==="add-area"){const d=S.drawings.find(x=>x.id===b.closest("[data-draw]").dataset.draw);const pg=d&&d.pages[+b.dataset.pi];
-    if(pg){pg.areas.push({id:"a"+uid(),name:"",area:"",svc:"Builders clean",basis:"typed",conf:""});renderDrawings();const ins=document.querySelectorAll(`[data-draw="${d.id}"] [data-af="name"]`);ins.length&&ins[ins.length-1].focus()}}
+    if(pg){pg.areas.push({id:"a"+uid(),kind:"room",rtype:"other",name:"",area:"",svc:"Builders clean",basis:"typed",conf:""});renderDrawings();const ins=document.querySelectorAll(`[data-draw="${d.id}"] [data-af="name"]`);ins.length&&ins[ins.length-1].focus()}}
+  if(act==="add-window"){const d=S.drawings.find(x=>x.id===b.closest("[data-draw]").dataset.draw);const pg=d&&d.pages[+b.dataset.pi];
+    if(pg){pg.areas.push({id:"a"+uid(),kind:"window",name:"",area:"",svc:"External window cleaning",basis:"typed",conf:""});renderDrawings();const ins=document.querySelectorAll(`[data-draw="${d.id}"] [data-af="name"]`);ins.length&&ins[ins.length-1].focus()}}
+  if(act==="del-scan"){const sid=b.closest("[data-scan]").dataset.scan;removeScanPhotos(sid);S.scans=S.scans.filter(x=>x.sid!==sid);renderScans();renderItems();updateTotals();touch()}
+  if(act==="rescan"){const sc=S.scans.find(x=>x.sid===b.closest("[data-scan]").dataset.scan);if(sc&&canMeasure&&scanImg(sc)){if(!sc.data)sc.data=scanImg(sc);removeScanPhotos(sc.sid);sc.results=[];queueScan(sc);renderScans();renderItems();updateTotals()}}
+  if(act==="est-km")estimateKm();
   if(act==="del-area"){const id=b.closest("[data-area]").dataset.area;S.drawings.forEach(d=>d.pages.forEach(pg=>pg.areas=pg.areas.filter(a=>a.id!==id)));syncDrawingItems();renderDrawings();renderItems();updateTotals();touch()}
   if(act==="view-page"){const d=S.drawings.find(x=>x.id===b.closest("[data-draw]").dataset.draw);const pg=d&&d.pages[+b.dataset.pi];if(!pg||!pg.data)return;document.getElementById("viewerImg").src=pg.data;document.getElementById("viewer").hidden=false;document.body.style.overflow="hidden";document.getElementById("viewer").scrollTop=0}
   if(act==="close-viewer"){document.getElementById("viewer").hidden=true;document.body.style.overflow=""}
@@ -698,11 +775,13 @@ function fallbackCopy(t){const ta=document.createElement("textarea");ta.value=t;
   let ok=false;try{ok=document.execCommand("copy")}catch(e){}ta.remove();toast(ok?"Quote copied":"Copy blocked here. Take a screenshot instead.")}
 function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
 function drawJpeg(img,max,q){const s=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext("2d").drawImage(img,0,0,c.width,c.height);return c.toDataURL("image/jpeg",q)}
-function shrink(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{
-  let d=drawJpeg(img,1000,.65);if(d.length>230000)d=drawJpeg(img,800,.55);if(d.length>230000)d=drawJpeg(img,600,.5);res(d)};img.onerror=()=>res(null);img.src=r.result};r.onerror=()=>res(null);r.readAsDataURL(file)})}
+function shrinkFrom(img){let d=drawJpeg(img,1000,.65);if(d.length>230000)d=drawJpeg(img,800,.55);if(d.length>230000)d=drawJpeg(img,600,.5);return d}
+async function bitmapFallback(file){try{if(!window.createImageBitmap)return null;const bm=await createImageBitmap(file);return shrinkFrom(bm)}catch(e){return null}}
+function shrink(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{try{res(shrinkFrom(img))}catch(e){res(null)}};img.onerror=()=>bitmapFallback(file).then(res);img.src=r.result};r.onerror=()=>bitmapFallback(file).then(res);r.readAsDataURL(file)})}
 
 /* ---------- reading photos and drawings (asks Claude, on the viewer's own account) ---------- */
-let sampleFn=null,canMeasure=false,measureChecked=false;
+let sampleFn=null,canMeasure=false,measureChecked=false,imgMax=1;
+const HI={};/* sharp page renders kept in memory for reading drawings (not saved) */
 const jobs=[];let running=false;
 function enqueue(job){jobs.push(job);runJobs()}
 async function runJobs(){if(running)return;running=true;while(jobs.length){const j=jobs.shift();try{await j()}catch(e){}}running=false}
@@ -724,7 +803,8 @@ function stopQueue(disable){
   jobs.length=0;if(disable){canMeasure=false;measureChecked=true}
   S.items.forEach(i=>i.photos.forEach(x=>{if(x.estState==="queued")x.estState=""}));
   S.drawings.forEach(d=>d.pages.forEach(pg=>{if(pg.state==="queued")pg.state=""}));
-  renderItems();renderDrawings();updateTotals();
+  S.scans.forEach(sc=>{if(sc.state==="queued")sc.state=""});
+  renderItems();renderDrawings();renderScans();updateTotals();
 }
 function handleAiError(e){const c=e&&e.code;if(FATAL.includes(c))stopQueue(true);else if(c==="rate_limited")stopQueue(false)}
 
@@ -745,6 +825,81 @@ async function measureOne(iid,pid){
   touch();refreshPhotos(it);updateTotals();
 }
 
+/* ---------- room scanning: one photo, every floor type and window in it ---------- */
+const SCAN_SVCS=["Carpet cleaning","Deep machine scrub vinyl flooring","Tile and grout cleaning","Window cleaning","High pressure cleaning","General cleaning"];
+const SHORT={"Carpet cleaning":"Carpet","Deep machine scrub vinyl flooring":"Vinyl","Tile and grout cleaning":"Tile & grout","Window cleaning":"Windows","High pressure cleaning":"Pressure clean","General cleaning":"Hard floor"};
+function scanImg(sc){if(sc.data)return sc.data;for(const it of S.items)for(const p of it.photos)if(p.scan===sc.sid&&p.data)return p.data;return ""}
+function scanPrompt(){
+  return `You are a commercial cleaning estimator in Perth, Western Australia, measuring a site from one photo for a quote. Property type: ${S.q.ptype}.
+1. Name the room or area shown (for example "Office 2", "Staff kitchen", "Ground floor toilets", "Open-plan workstations", "Front paving").
+2. Find every surface in the photo that one of these services would clean, and estimate its area in square metres:
+${SCAN_SVCS.map(k=>`- "${k}": ${svcOf(k).m}`).join("\n")}
+Rules: carpet floors = "Carpet cleaning". Vinyl, lino or vinyl plank floors = "Deep machine scrub vinyl flooring". Tiled floors or tiled walls = "Tile and grout cleaning". Window glass = "Window cleaning" (glass area, one side). Outdoor concrete, paving or driveways = "High pressure cleaning". Timber, polished concrete or other hard floors inside = "General cleaning". Only list services that clearly apply. Count floor hidden under furniture if it is part of the same room.
+Work out scale from objects of known size: Australian internal doors are about 2.04 m high and 0.82 m wide; floor tiles are usually 300, 450 or 600 mm square; carpet tiles are 500 mm square; ceiling tiles are 600 or 1200 x 600 mm; desks are about 1.2 to 1.8 m long and 0.75 m high; office chairs are about 0.65 m wide; toilet pans are about 0.7 m deep; kitchen benchtops are about 0.9 m high and 0.6 m deep; ceilings are usually 2.4 to 2.7 m high; a car is about 4.5 m long.
+Reply with only this JSON:
+{"room": string, "room_type": "office"|"open plan"|"meeting room"|"kitchen"|"toilet"|"reception"|"corridor"|"storage"|"warehouse"|"outdoor"|"other", "surfaces": [{"service": string, "area_m2": number, "low": number, "high": number, "confidence": "low"|"medium"|"high", "what": string}], "reference": string, "note": string}`}
+function itemForSvc(svc){
+  let it=S.items.find(i=>i.src!=="drawing"&&i.svc===svc);
+  if(!it){it=S.items.find(i=>i.src!=="drawing"&&!n(i.area)&&!i.photos.length&&!n(i.price)&&!String(i.notes||"").trim());
+    if(it){it.svc=svc;it.fromScan=true}else{it={id:uid(),svc,area:"",L:"",W:"",cond:"m",price:"",notes:"",photos:[],fromScan:true};S.items.push(it)}}
+  return it;
+}
+function removeScanPhotos(sid){
+  S.items.forEach(it=>{it.photos=it.photos.filter(p=>{if(p.scan!==sid)return true;if(p.saved)S.removedPhotos.push(p.pid);return false})});
+  S.items=S.items.filter(it=>!(it.fromScan&&!it.photos.length&&!n(it.area)&&!String(it.notes||"").trim()));
+  if(!S.items.length)S.items.push({id:uid(),svc:"General cleaning",area:"",L:"",W:"",cond:"m",price:"",notes:"",photos:[]});
+}
+function queueScan(sc){if(!canMeasure||!sc.data)return;sc.state="queued";const sid=sc.sid;enqueue(()=>scanOne(sid))}
+async function scanOne(sid){
+  const sc=S.scans.find(x=>x.sid===sid);if(!sc||sc.state!=="queued"||!sc.data)return;
+  sc.state="scanning";renderScans();
+  try{
+    const r=await sampleFn.json(scanPrompt(),{images:[dataToBlob(sc.data)]});
+    const ok=new Set(SCAN_SVCS);const merged={};
+    (Array.isArray(r&&r.surfaces)?r.surfaces:[]).forEach(x=>{if(x&&ok.has(x.service)&&n(x.area_m2)>0){const m=merged[x.service]||(merged[x.service]={area:0,low:0,high:0,conf:x.confidence,what:[]});m.area+=n(x.area_m2);m.low+=n(x.low);m.high+=n(x.high);if(x.what)m.what.push(String(x.what).slice(0,80))}});
+    sc.room=String((r&&r.room)||"Room").slice(0,50);sc.rtype=String((r&&r.room_type)||"other");sc.results=[];
+    const ref=r&&r.reference?` Scale from ${String(r.reference).slice(0,100)}.`:"";
+    Object.entries(merged).forEach(([svc,m])=>{const it=itemForSvc(svc);
+      const p={pid:"p"+Date.now().toString(36)+uid(),data:sc.data,saved:false,est:+m.area.toFixed(1),low:+m.low.toFixed(1),high:+m.high.toFixed(1),
+        conf:["low","medium","high"].includes(m.conf)?m.conf:"medium",estNote:`${sc.room}: ${m.what.join("; ")||SHORT[svc].toLowerCase()}.${ref}`,estState:"done",scan:sc.sid,room:sc.room};
+      it.photos.push(p);sc.results.push({svc,area:p.est})});
+    if(sc.results.length){sc.state="done";sc.note=""}
+    else{sc.state="error";sc.note=(r&&r.note?String(r.note).slice(0,160)+" ":"")+"No carpet, vinyl, tile, windows or paving were found. Add this photo to a service instead."}
+  }catch(e){sc.state="error";sc.note=errCopy(e&&e.code).replace(/Tap Measure|tap Measure/g,"tap Scan again");handleAiError(e)}
+  renderScans();safeRenderItems();updateTotals();touch();
+}
+function renderScans(){
+  const box=document.getElementById("scans");if(!box)return;
+  document.getElementById("scanHint").textContent=canMeasure
+    ?"Take one photo of each room or area. The app works out the floor type (carpet, vinyl or tile), windows and outdoor paving, measures each one, and adds it to the right service below. Check the m² before sending the quote."
+    :(measureChecked?"Photo scanning isn't available in this view. Add services below and type the m².":"Checking whether photo scanning is available…");
+  document.getElementById("scanCount").textContent=S.scans.length?`${S.scans.length} ${S.scans.length===1?"photo":"photos"}`:"";
+  box.innerHTML=S.scans.map((sc,i)=>{const img=scanImg(sc);
+    let st="";
+    if(sc.state==="queued")st=`<span class="busy">Waiting to scan…</span>`;
+    else if(sc.state==="scanning")st=`<span class="busy">Finding floor types and measuring…</span>`;
+    else if(sc.state==="error")st=`<small>${esc(sc.note||"Couldn't scan this photo.")}</small>`;
+    const res=(sc.results||[]).map(r=>`<span class="rchip">${esc(SHORT[r.svc]||r.svc)} ${n(r.area)} m²</span>`).join("");
+    const again=canMeasure&&img&&sc.state!=="queued"&&sc.state!=="scanning"?`<div><button class="btn small ghost" data-act="rescan">Scan again</button></div>`:"";
+    return `<div class="prow" data-scan="${esc(sc.sid)}"><div class="thumb">${img?`<img src="${img}" alt="Room photo ${i+1}">`:""}<i>${i+1}</i><button data-act="del-scan" aria-label="Remove photo and its measurements">×</button></div>
+      <div class="pinfo">${sc.room&&sc.state==="done"?`<b>${esc(sc.room)}</b>`:""}${st}${res?`<div>${res}</div>`:""}${again}</div></div>`}).join("");
+}
+
+/* ---------- travel distance estimate (text only) ---------- */
+async function estimateKm(){
+  const addr=String(S.q.site||"").trim();if(!addr){toast("Enter the site address first");return}
+  if(!sampleFn){toast("Distance estimates aren't available here. Type the km.");return}
+  const btn=document.getElementById("estKmBtn");btn.disabled=true;btn.textContent="Estimating…";
+  try{
+    const r=await sampleFn.json(`Estimate the one-way driving distance in kilometres from Perth CBD (Perth WA 6000) to this site in Western Australia: "${addr.slice(0,200)}". Reply with only JSON: {"km": number, "suburb": string}`,{modelTier:"quick"});
+    const km=n(r&&r.km);
+    if(km>0){S.travel.km=Math.round(km);document.getElementById("f-km").value=S.travel.km;
+      document.getElementById("kmNote").textContent=`Estimated ${S.travel.km} km to ${String((r&&r.suburb)||"the site").slice(0,40)}. Check on a map if it's close to ${n(S.set.freeKm)||30} km.`;touch();updateTotals()}
+    else toast("Couldn't estimate that address. Type the km.");
+  }catch(e){toast(e&&e.code==="not_granted"?"Estimating wasn't allowed. Type the km.":"Couldn't estimate the distance. Type the km.")}
+  btn.disabled=false;btn.textContent="Estimate km from site address";
+}
+
 /* ---------- building drawings ---------- */
 const PDFJS="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
 const MAX_PAGES=12;
@@ -754,24 +909,26 @@ function loadPdfJs(){if(!pdfReady)pdfReady=loadScript(PDFJS+"pdf.worker.min.js")
 async function pdfCanvases(file){
   await loadPdfJs();
   const doc=await window.pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
-  const out=[];
+  const out=[],texts=[];
   for(let i=1;i<=Math.min(doc.numPages,MAX_PAGES);i++){
     const page=await doc.getPage(i);const v0=page.getViewport({scale:1});
-    const v=page.getViewport({scale:Math.min(4,2000/Math.max(v0.width,v0.height))});
+    const v=page.getViewport({scale:Math.min(5,3200/Math.max(v0.width,v0.height))});
     const c=document.createElement("canvas");c.width=Math.round(v.width);c.height=Math.round(v.height);
     const ctx=c.getContext("2d");ctx.fillStyle="#ffffff";ctx.fillRect(0,0,c.width,c.height);
-    await page.render({canvasContext:ctx,viewport:v}).promise;out.push(c)}
-  return {canvases:out,total:doc.numPages};
+    await page.render({canvasContext:ctx,viewport:v}).promise;out.push(c);
+    let txt="";try{const tc=await page.getTextContent();txt=tc.items.map(x=>x.str).filter(x=>x&&x.trim()).join(" | ").replace(/\s+/g," ").slice(0,9000)}catch(e){}
+    texts.push(txt)}
+  return {canvases:out,texts,total:doc.numPages};
 }
-function fileImage(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>res(img);img.onerror=()=>rej(new Error("img"));img.src=r.result};r.onerror=()=>rej(new Error("img"));r.readAsDataURL(f)})}
+function fileImage(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>res(img);img.onerror=()=>(window.createImageBitmap?createImageBitmap(f).then(res,()=>rej(new Error("img"))):rej(new Error("img")));img.src=r.result};r.onerror=()=>rej(new Error("img"));r.readAsDataURL(f)})}
 function pageJpeg(src){let d=drawJpeg(src,1600,.8);for(const [m,q] of [[1400,.7],[1200,.6],[1000,.55],[800,.5]]){if(d.length<=240000)break;d=drawJpeg(src,m,q)}return d}
 async function addDrawing(f){
   const d={id:"d"+uid(),name:f.name||"Drawing",pages:[],err:"",loading:true};S.drawings.push(d);renderDrawings();
   try{
-    let srcs=[],total=1;
-    if(/pdf/i.test(f.type)||/\.pdf$/i.test(f.name)){const r=await pdfCanvases(f);srcs=r.canvases;total=r.total}
+    let srcs=[],texts=[],total=1;
+    if(/pdf/i.test(f.type)||/\.pdf$/i.test(f.name)){const r=await pdfCanvases(f);srcs=r.canvases;texts=r.texts;total=r.total}
     else srcs=[await fileImage(f)];
-    srcs.forEach(c=>d.pages.push({pid:"p"+Date.now().toString(36)+uid(),data:pageJpeg(c),saved:false,state:"",areas:[],total:null,note:""}));
+    srcs.forEach((c,i)=>{const pid="p"+Date.now().toString(36)+uid();HI[pid]=c;d.pages.push({pid,data:pageJpeg(c),text:texts[i]||"",saved:false,state:"",areas:[],total:null,note:""})});
     if(total>srcs.length)d.err=`Only the first ${srcs.length} of ${total} pages were added.`;
   }catch(e){d.err=e&&e.message==="load"?"The drawing reader couldn't load. Check your connection and try again.":"This file couldn't be opened. Use a PDF, JPG or PNG."}
   d.loading=false;
@@ -784,18 +941,32 @@ function defaultSvc(finish,outdoor){
   if(/new build|construction/i.test(S.q.ptype))return "Builders clean";
   return ({carpet:"Carpet cleaning",tile:"Tile and grout cleaning",vinyl:"Deep machine scrub vinyl flooring"})[finish]||"General cleaning";
 }
-function readPrompt(d,pi){
-  return `This image is page ${pi+1} of a building drawing used to quote a cleaning job in Perth, Western Australia. Property type: ${S.q.ptype}. File name: ${String(d.name).slice(0,120)}.
-List every room or area shown with its floor area in square metres.
-- Use areas written on the drawing first (on room labels or in an area schedule).
-- Otherwise calculate from the dimensions written on the drawing. Australian drawings use millimetres, so 4200 x 3600 is 15.1 m2.
-- Otherwise estimate from the drawing scale.
-- Include garages and outdoor hard surfaces that are drawn (alfresco, porch, patio, driveway, paths).
-- Do not list total rows such as "Total living" or "Total area" as areas. Put the drawing's own total floor area in total_m2_on_drawing.
-- If this page is not a floor plan (elevations, sections, site notes, cover sheet), return an empty areas list and say what the page shows in note.
-This drawing is used to price a builders clean, which is charged on the floor area of the building.
+const RTYPES=[["office","Office"],["open plan","Open plan / workstations"],["meeting room","Meeting room"],["kitchen","Kitchen / breakout"],["toilet","Toilet / amenities"],["reception","Reception / foyer"],["corridor","Corridor"],["storage","Storage / plant"],["warehouse","Warehouse"],["garage","Garage"],["outdoor","Outdoor"],["other","Other"]];
+const RT_KEYS=new Set(RTYPES.map(r=>r[0]));
+const isWin=a=>a.kind==="window";
+const isOutdoor=a=>a.rtype?a.rtype==="outdoor":!!a.outdoor&&!/garage/i.test(a.name||"");
+function readPrompt(d,pi,tiles,text){
+  return `${tiles?"You are given 5 images of page "+(pi+1)+" of a building drawing. Image 1 is the whole page. Images 2 to 5 are zoomed, slightly overlapping quarters of the same page (top-left, top-right, bottom-left, bottom-right) so you can read small labels and dimensions. Use the quarters to read text, but count each room and window only once.":"This image is page "+(pi+1)+" of a building drawing."}${text?`\nText extracted from this PDF page (labels and dimensions, in no particular order; trust these numbers over what you read from the image): ${text}`:""}\nThis drawing is being used to quote a cleaning job in Perth, Western Australia. Property type: ${S.q.ptype}. File name: ${String(d.name).slice(0,120)}.
+1. List every room or area on this page with its floor area in square metres, and classify each one.
+- Use areas written on the drawing first (room labels or an area schedule). Otherwise calculate from the dimensions on the drawing; Australian drawings use millimetres, so 4200 x 3600 is 15.1 m2. Otherwise estimate from the drawing scale.
+- Include offices, open-plan areas, meeting rooms, kitchens, toilets and amenities, corridors, stores, garages and drawn outdoor areas.
+- Do not list total rows such as "Total area", "NLA" or "Tenancy" as rooms. Put the drawing's own total tenancy or floor area in total_m2_on_drawing.
+2. List the windows and glazing: external windows, shopfronts, glazed doors and glazed partitions, grouped by location, with the glass area in square metres (one side). Use window schedules, elevations or written sizes if shown. Otherwise use the window width on the plan and assume 2.1 m high for standard windows and 2.7 m for full-height glazing or shopfronts, and set basis to "scaled". Mark internal glazed partitions with internal: true.
+3. If this page is not a floor plan and shows no window sizes (sections, cover sheet, notes), return empty lists and say what the page shows in note.
 Reply with only this JSON:
-{"areas":[{"name":string,"area_m2":number,"finish":"carpet"|"tile"|"vinyl"|"timber"|"concrete"|"paving"|"other"|"unknown","outdoor":boolean,"basis":"written"|"dimensions"|"scaled","confidence":"low"|"medium"|"high"}],"total_m2_on_drawing":number or null,"note":string}`;
+{"rooms":[{"name":string,"room_type":"office"|"open plan"|"meeting room"|"kitchen"|"toilet"|"reception"|"corridor"|"storage"|"warehouse"|"garage"|"outdoor"|"other","area_m2":number,"basis":"written"|"dimensions"|"scaled","confidence":"low"|"medium"|"high"}],"windows":[{"location":string,"glass_m2":number,"internal":boolean,"basis":"written"|"dimensions"|"scaled","confidence":"low"|"medium"|"high"}],"total_m2_on_drawing":number or null,"note":string}`;
+}
+function srcImage(pg){if(HI[pg.pid])return Promise.resolve(HI[pg.pid]);return new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=pg.data})}
+function cut(src,x,y,w,h,max){const s=Math.min(1,max/Math.max(w,h));const c=document.createElement("canvas");c.width=Math.max(1,Math.round(w*s));c.height=Math.max(1,Math.round(h*s));
+  const ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(src,x,y,w,h,0,0,c.width,c.height);
+  return new Promise(res=>c.toBlob(b=>res(b),"image/jpeg",.85))}
+async function pageImages(pg){
+  const src=await srcImage(pg);if(!src)return {imgs:[dataToBlob(pg.data)],tiles:false};
+  const W=src.width,H=src.height;const imgs=[await cut(src,0,0,W,H,1600)];
+  if(imgMax<5||Math.max(W,H)<1200)return {imgs,tiles:false};
+  const ox=Math.round(W*.06),oy=Math.round(H*.06),hw=Math.ceil(W/2),hh=Math.ceil(H/2);
+  for(const [x,y] of [[0,0],[1,0],[0,1],[1,1]]){const x0=Math.max(0,x*hw-ox),y0=Math.max(0,y*hh-oy);imgs.push(await cut(src,x0,y0,Math.min(W-x0,hw+ox),Math.min(H-y0,hh+oy),1600))}
+  return {imgs:imgs.filter(Boolean),tiles:true};
 }
 function queueRead(d,pg){if(!canMeasure||!pg.data)return;pg.state="queued";const did=d.id,pid=pg.pid;enqueue(()=>readPage(did,pid))}
 async function readPage(did,pid){
@@ -803,12 +974,14 @@ async function readPage(did,pid){
   if(!pg||pg.state!=="queued")return;
   pg.state="reading";renderDrawings();
   try{
-    const r=await sampleFn.json(readPrompt(d,pi),{images:[dataToBlob(pg.data)]});
-    const list=Array.isArray(r&&r.areas)?r.areas.slice(0,60):[];
-    pg.areas=list.filter(a=>a&&n(a.area_m2)>0).map(a=>{const garage=/garage/i.test(String(a.name||""));
-      return {id:"a"+uid(),name:String(a.name||"Area").slice(0,60),area:+n(a.area_m2).toFixed(1),finish:String(a.finish||""),outdoor:!!a.outdoor||/garage/i.test(String(a.name||"")),
-        svc:a.outdoor&&!garage?"":"Builders clean",basis:["written","dimensions","scaled"].includes(a.basis)?a.basis:"scaled",
-        conf:["low","medium","high"].includes(a.confidence)?a.confidence:"medium"}});
+    const {imgs,tiles}=await pageImages(pg);
+    const r=await sampleFn.json(readPrompt(d,pi,tiles,pg.text||""),{images:imgs});
+    const rooms=(Array.isArray(r&&r.rooms)?r.rooms:(Array.isArray(r&&r.areas)?r.areas:[])).slice(0,80);
+    const wins=(Array.isArray(r&&r.windows)?r.windows:[]).slice(0,40);
+    const basis=x=>["written","dimensions","scaled"].includes(x)?x:"scaled",conf=x=>["low","medium","high"].includes(x)?x:"medium";
+    pg.areas=[...rooms.filter(a=>a&&n(a.area_m2)>0).map(a=>{const rt=RT_KEYS.has(a.room_type)?a.room_type:"other";
+        return {id:"a"+uid(),kind:"room",rtype:rt,name:String(a.name||"Area").slice(0,60),area:+n(a.area_m2).toFixed(1),svc:rt==="outdoor"?"":"Builders clean",basis:basis(a.basis),conf:conf(a.confidence)}}),
+      ...wins.filter(w=>w&&n(w.glass_m2)>0).map(w=>({id:"a"+uid(),kind:"window",name:String(w.location||"Windows").slice(0,60),area:+n(w.glass_m2).toFixed(1),svc:w.internal?"":"External window cleaning",basis:basis(w.basis),conf:conf(w.confidence)}))];
     pg.total=n(r&&r.total_m2_on_drawing)>0?+n(r.total_m2_on_drawing).toFixed(1):null;
     pg.note=r&&r.note?String(r.note).slice(0,240):"";
     pg.state="done";
@@ -817,17 +990,23 @@ async function readPage(did,pid){
 }
 function allAreas(){const out=[];S.drawings.forEach(d=>d.pages.forEach(pg=>pg.areas.forEach(a=>out.push(a))));return out}
 function findArea(id){return allAreas().find(a=>a.id===id)}
-/* Services built from the drawings: one line per service, m² = the areas set to that service. */
+/* Services built from the drawings. Rooms are priced as Builders clean; windows at the window rate the salesperson picks. */
+function roomSummary(list){const by={};list.forEach(a=>{const k=RT_KEYS.has(a.rtype)?a.rtype:"other";const g=by[k]||(by[k]={c:0,m:0});g.c++;g.m+=n(a.area)});
+  return RTYPES.filter(([k])=>by[k]).map(([k,l])=>`${by[k].c} × ${l.toLowerCase()} (${+by[k].m.toFixed(1)} m²)`).join(", ")}
 function syncDrawingItems(){
-  const groups={};allAreas().forEach(a=>{if(a.svc)a.svc="Builders clean";if(a.svc&&n(a.area)>0)(groups[a.svc]=groups[a.svc]||[]).push(a)});
+  const groups={};const add=(svc,a)=>(groups[svc]=groups[svc]||[]).push(a);
+  allAreas().forEach(a=>{if(!a.kind)a.kind="room";if(!(n(a.area)>0)||!a.svc)return;
+    if(isWin(a)){if(a.svc==="both"){add("Window cleaning",a);add("External window cleaning",a)}else if(a.svc==="Window cleaning"||a.svc==="External window cleaning")add(a.svc,a)}
+    else{a.svc="Builders clean";add("Builders clean",a)}});
   const old=S.items.filter(i=>i.src==="drawing");
   const manual=S.items.filter(i=>i.src!=="drawing");
   const blank=i=>!n(i.area)&&!i.photos.length&&!n(i.price)&&!String(i.notes||"").trim();
   const gen=SVC.filter(x=>groups[x.k]).map(x=>{const list=groups[x.k];const prev=old.find(o=>o.svc===x.k);
-    return {id:prev?prev.id:uid(),src:"drawing",svc:x.k,area:+list.reduce((t,a)=>t+n(a.area),0).toFixed(1),L:"",W:"",cond:prev?prev.cond:"m",price:"",photos:prev?prev.photos:[],
-      notes:"From drawing: "+list.map(a=>`${a.name||"Area"} ${n(a.area)} m²`).join(", ")}});
+    return {id:prev?prev.id:uid(),src:"drawing",svc:x.k,area:+list.reduce((t,a)=>t+n(a.area),0).toFixed(1),L:"",W:"",cond:prev?prev.cond:(x.k==="Builders clean"?"l":"m"),price:"",photos:prev?prev.photos:[],
+      notes:"From drawing: "+(x.k==="Builders clean"?roomSummary(list):list.map(a=>`${a.name||"Windows"} ${n(a.area)} m²`).join(", "))}});
   old.filter(o=>!gen.some(g=>g.id===o.id)).forEach(o=>o.photos.filter(p=>p.saved).forEach(p=>S.removedPhotos.push(p.pid)));
   S.items=[...(gen.length?manual.filter(i=>!blank(i)):manual),...gen];
+  if(!S.items.length)S.items.push({id:uid(),svc:"General cleaning",area:"",L:"",W:"",cond:"m",price:"",notes:"",photos:[]});
 }
 let drawPending=false;
 function renderDrawings(){
@@ -835,22 +1014,26 @@ function renderDrawings(){
   if(box.contains(document.activeElement)&&document.activeElement.tagName!=="BUTTON"){drawPending=true;return}
   drawPending=false;
   document.getElementById("drawHint").textContent=canMeasure
-    ?"For builders cleans only. Upload the floor plan as a PDF or a photo. Every room and its m² is read from the drawing and priced as Builders clean. Check each area and untick any that aren't part of the clean. Other services are priced from m² or photos below."
+    ?"Upload the floor plan as a PDF or a photo. The app reads every room (offices, kitchens, toilets and more) and its m², adds them up as the tenancy area and prices them as Builders clean. It also finds the windows and works out the glass area for window cleaning. Check each area before sending the quote."
     :(measureChecked?"Reading drawings isn't available in this view. You can still attach a drawing and type each area in.":"Checking whether drawing reading is available…");
   document.getElementById("drawCount").textContent=S.drawings.length?`${S.drawings.length} ${S.drawings.length===1?"drawing":"drawings"}`:"";
   const opts=sel=>`<option value="Builders clean"${sel?" selected":""}>Builders clean</option><option value=""${!sel?" selected":""}>Don't quote</option>`;
+  const wopts=sel=>[["External window cleaning","Outside only"],["Window cleaning","Inside only"],["both","Inside and outside"],["","Included / don't quote"]].map(([v,l])=>`<option value="${v}"${(sel||"")===v?" selected":""}>${l}</option>`).join("");
+  const topts=sel=>RTYPES.map(([v,l])=>`<option value="${v}"${(sel||"other")===v?" selected":""}>${l}</option>`).join("");
   box.innerHTML=S.drawings.map(d=>`<div class="drawing" data-draw="${esc(d.id)}">
     <div class="dhead"><b>${esc(d.name)}</b><button class="x" data-act="del-drawing" aria-label="Remove drawing" title="Remove drawing">×</button></div>
     ${d.loading?`<span class="busy">Opening drawing…</span>`:""}${d.err?`<small class="hint">${esc(d.err)}</small>`:""}
     ${d.pages.map((pg,pi)=>{
       let status="";
       if(pg.state==="queued")status=`<span class="busy">Waiting to read…</span>`;
-      else if(pg.state==="reading")status=`<span class="busy">Reading rooms and areas…</span>`;
+      else if(pg.state==="reading")status=`<span class="busy">Reading rooms, areas and windows…</span>`;
       else if(pg.note)status=`<small class="hint">${esc(pg.note)}</small>`;
-      const rows=pg.areas.map(a=>`<div class="arow" data-area="${esc(a.id)}">
-        <input id="an-${esc(a.id)}" data-af="name" value="${esc(a.name)}" placeholder="Room or area" aria-label="Area name">
-        <input id="am-${esc(a.id)}" data-af="area" type="number" inputmode="decimal" value="${esc(a.area)}" placeholder="m²" aria-label="${esc(a.name||"Area")} m²">
-        <select id="as-${esc(a.id)}" data-af="svc" aria-label="Service for ${esc(a.name||"area")}">${opts(a.svc)}</select>
+      const rows=pg.areas.map(a=>`<div class="arow${isWin(a)?" win":""}" data-area="${esc(a.id)}">
+        <input id="an-${esc(a.id)}" data-af="name" value="${esc(a.name)}" placeholder="${isWin(a)?"Window location":"Room or area"}" aria-label="${isWin(a)?"Window location":"Area name"}">
+        <input id="am-${esc(a.id)}" data-af="area" type="number" inputmode="decimal" value="${esc(a.area)}" placeholder="m²" aria-label="${esc(a.name||"Area")} m²${isWin(a)?" of glass":""}">
+        <div class="arow-sel">${isWin(a)
+          ?`<span class="hint" style="align-self:center">Window glass (m², one side)</span><select id="as-${esc(a.id)}" data-af="svc" aria-label="Window cleaning for ${esc(a.name||"windows")}">${wopts(a.svc)}</select>`
+          :`<select id="at-${esc(a.id)}" data-af="rtype" aria-label="Room type for ${esc(a.name||"area")}">${topts(a.rtype)}</select><select id="as-${esc(a.id)}" data-af="svc" aria-label="Service for ${esc(a.name||"area")}">${opts(a.svc)}</select>`}</div>
         <small>${a.basis==="written"?"Area written on drawing":a.basis==="dimensions"?"Worked out from dimensions":a.basis==="typed"?"Typed in":"Estimated from drawing scale"}${a.conf?` · ${a.conf} confidence`:""} · <button class="linkbtn" data-act="del-area" style="background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit">Remove</button></small>
       </div>`).join("");
       const again=canMeasure&&pg.state!=="queued"&&pg.state!=="reading"?`<button class="btn small ghost" data-act="read-page" data-pi="${pi}">${pg.state==="done"?"Read again (replaces areas)":"Read page"}</button>`:"";
@@ -859,20 +1042,30 @@ function renderDrawings(){
         <div class="dinfo"><div class="hint">Page ${pi+1}</div>${status}
           ${rows?`<div class="alist">${rows}</div>`:""}
           ${pg.areas.length?`<div class="dsum" id="ds-${esc(pg.pid)}"></div>`:""}
-          <div class="actions"><button class="btn small ghost" data-act="add-area" data-pi="${pi}">+ Add area</button>${again}</div>
+          <div class="actions"><button class="btn small ghost" data-act="add-area" data-pi="${pi}">+ Add room</button><button class="btn small ghost" data-act="add-window" data-pi="${pi}">+ Add window</button>${again}</div>
         </div></div>`}).join("")}
   </div>`).join("");
   updateDrawSums();
 }
 function updateDrawSums(){
   S.drawings.forEach(d=>d.pages.forEach(pg=>{const el=document.getElementById("ds-"+pg.pid);if(!el)return;
-    const all=+pg.areas.reduce((t,a)=>t+n(a.area),0).toFixed(1);const q=+pg.areas.reduce((t,a)=>t+(a.svc?n(a.area):0),0).toFixed(1);
-    let txt=`Quoting ${q} m² of ${all} m² listed.`;let warn=false;
-    const inside=+pg.areas.reduce((t,a)=>t+(a.outdoor?0:n(a.area)),0).toFixed(1);
-    if(pg.total){txt+=` Drawing total: ${pg.total} m² (indoor rooms listed: ${inside} m²).`;warn=Math.abs(inside-pg.total)>pg.total*0.1}
+    const rooms=pg.areas.filter(a=>!isWin(a)),wins=pg.areas.filter(isWin);
+    const inside=+rooms.filter(a=>!isOutdoor(a)).reduce((t,a)=>t+n(a.area),0).toFixed(1);
+    const q=+rooms.reduce((t,a)=>t+(a.svc?n(a.area):0),0).toFixed(1);
+    const glass=+wins.reduce((t,a)=>t+n(a.area),0).toFixed(1);
+    let txt=`Rooms: quoting ${q} m² (indoor ${inside} m²).${wins.length?` Windows: ${glass} m² of glass.`:""}`;let warn=false;
+    if(pg.total){txt+=` Drawing total: ${pg.total} m².`;warn=Math.abs(inside-pg.total)>pg.total*0.1}
     el.textContent=txt+(warn?" The indoor rooms don't add up to the drawing total. Check for missing or doubled rooms.":"");el.classList.toggle("warn",warn)}));
+  const box=document.getElementById("drawSummary");if(!box)return;
+  const rooms=allAreas().filter(a=>!isWin(a)&&n(a.area)>0),wins=allAreas().filter(a=>isWin(a)&&n(a.area)>0);
+  if(!rooms.length&&!wins.length){box.hidden=true;return}
+  const tenancy=+rooms.filter(a=>!isOutdoor(a)).reduce((t,a)=>t+n(a.area),0).toFixed(1);
+  const glass=+wins.reduce((t,a)=>t+n(a.area),0).toFixed(1);
+  const by={};rooms.forEach(a=>{const k=RT_KEYS.has(a.rtype)?a.rtype:"other";const g=by[k]||(by[k]={c:0,m:0});g.c++;g.m+=n(a.area)});
+  box.hidden=false;
+  box.innerHTML=`<b>Tenancy (indoor): ${tenancy} m²</b><div>${RTYPES.filter(([k])=>by[k]).map(([k,l])=>`<span class="rchip">${esc(l)}: ${by[k].c} · ${+by[k].m.toFixed(1)} m²</span>`).join("")}${wins.length?`<span class="rchip">Windows: ${glass} m² glass</span>`:""}</div>`;
 }
-document.addEventListener("focusout",()=>{setTimeout(()=>{if(drawPending)renderDrawings()},0)});
+document.addEventListener("focusout",()=>{setTimeout(()=>{if(drawPending)renderDrawings();if(itemsPending){itemsPending=false;renderItems();updateTotals()}},0)});
 
 /* ---------- shared storage ---------- */
 let rateTimer,rateWriting=false,ratePending=false;
@@ -896,8 +1089,9 @@ async function saveQuote(){
     if(!S.createdAt)S.createdAt=now;if(!S.createdBy)S.createdBy=ROLE.id;
     const body={no:S.q.no,client:S.q.client,site:S.q.site,sales:S.q.sales,status:S.status,total:+c.total.toFixed(2),totalEx:+c.ex.toFixed(2),
       createdAt:S.createdAt,updatedAt:now,createdBy:S.createdBy||null,updatedBy:ROLE.id||null,
-      q:S.q,items:S.items.map(i=>Object.assign({},i,{photos:i.photos.map(p=>({pid:p.pid,est:p.est??"",low:p.low??"",high:p.high??"",conf:p.conf||"",estNote:p.estNote||"",estState:p.estState==="measuring"||p.estState==="queued"?"":(p.estState||"")}))})),travel:S.travel,mat:S.mat,adj:S.adj,set:S.set,
-      drawings:S.drawings.map(d=>({id:d.id,name:d.name,err:d.err||"",pages:d.pages.map(pg=>({pid:pg.pid,areas:pg.areas,total:pg.total??null,note:pg.note||"",state:pg.state==="done"?"done":""}))}))};
+      q:S.q,items:S.items.map(i=>Object.assign({},i,{photos:i.photos.map(p=>({pid:p.pid,scan:p.scan||"",room:p.room||"",est:p.est??"",low:p.low??"",high:p.high??"",conf:p.conf||"",estNote:p.estNote||"",estState:p.estState==="measuring"||p.estState==="queued"?"":(p.estState||"")}))})),travel:S.travel,mat:S.mat,adj:S.adj,set:S.set,
+      drawings:S.drawings.map(d=>({id:d.id,name:d.name,err:d.err||"",pages:d.pages.map(pg=>({pid:pg.pid,text:(pg.text||"").slice(0,9000),areas:pg.areas,total:pg.total??null,note:pg.note||"",state:pg.state==="done"?"done":""}))})),
+      scans:S.scans.map(sc=>({sid:sc.sid,room:sc.room||"",rtype:sc.rtype||"",note:sc.note||"",results:sc.results||[],state:sc.state==="done"||sc.state==="error"?sc.state:""}))};
     await ref.set(body);
     S.dirty=false;S.ratesLive=false;saveLocal();updateTotals();toast("Quote saved");
   }catch(e){toast(e&&e.code==="quota_exceeded"?"Storage is full. Delete old photos or quotes, then try again.":"Couldn't save. Check your connection and try again.")}
@@ -912,15 +1106,16 @@ async function openQuote(id){
   S=normQuote({qid:id,example:false,ratesLive:false,dirty:false,status:s.status,createdBy:s.createdBy,createdAt:s.createdAt,q:s.q,
     items:(s.items||[]).map(it=>Object.assign({},it,{photos:(it.photos||[]).map(x=>typeof x==="string"?{pid:x}:x).filter(x=>photos[x.pid]).map(x=>Object.assign({},x,{data:photos[x.pid].data,saved:true}))})),
     drawings:(s.drawings||[]).map(d=>Object.assign({},d,{pages:(d.pages||[]).map(pg=>Object.assign({},pg,{data:photos[pg.pid]?photos[pg.pid].data:"",saved:!!photos[pg.pid]}))})),
+    scans:(s.scans||[]).map(sc=>Object.assign({},sc,{data:""})),
     travel:s.travel,mat:s.mat,adj:s.adj,set:s.set,removedPhotos:[]});
   renderAll();saveLocal();showTab("quote");
 }
 
 async function connect(){
-  if(!window.claude||!window.claude.use){measureChecked=true;renderDrawings();renderItems();renderRates();updateTotals();return}
+  if(!window.claude||!window.claude.use){measureChecked=true;renderDrawings();renderScans();renderItems();renderRates();updateTotals();return}
   [db,user,sampleFn]=await Promise.all([claude.use("db"),claude.use("user"),claude.use("sample")]);
-  if(sampleFn){try{const l=await sampleFn.limits();canMeasure=!!(l&&l.images)}catch(e){canMeasure=false}}
-  measureChecked=true;renderDrawings();renderItems();updateTotals();
+  if(sampleFn){try{const l=await sampleFn.limits();canMeasure=!!(l&&l.images);imgMax=n(l&&l.images&&l.images.maxCount)||1}catch(e){canMeasure=false}}
+  measureChecked=true;document.getElementById("estKmBtn").hidden=!sampleFn;renderDrawings();renderScans();renderItems();updateTotals();
   if(user){ROLE.owner=await user.isOwner();ROLE.id=await user.id()}
   document.getElementById("roleChip").textContent=ROLE.owner?"Owner":"Sales";
   if(!db){renderRates();updateTotals();renderList();return}
@@ -935,7 +1130,7 @@ async function connect(){
   },()=>{QUOTES=[];renderList()});
   renderRates();updateTotals();renderList();
 }
-renderAll();
+renderAll();bindFileInputs();
 connect();
 
 /* ---------- client quote ---------- */
@@ -945,7 +1140,8 @@ const TERMS=["Prices are in Australian dollars. Rates are ex GST, and GST (10%) 
 function buildPaper(){
   const c=calc();let pn=0;const photos=[];
   const rows=S.items.filter(isPriced).map(it=>{const nums=it.photos.filter(p=>p.data).map(p=>{pn++;photos.push({p:p.data,n:pn,svc:svcLabel(it.svc)});return pn});
-    return `<tr><td><b>${esc(svcLabel(it.svc))}</b><br><small>${svcOf(it.svc).u==="job"?"Fixed price":`${qtyText(it)} · ${COND[it.cond]} condition`}${nums.length?` · Photos ${nums.join(", ")}`:""}</small>${it.notes?`<br><small>${esc(it.notes)}</small>`:""}</td><td>${money(lineCost(it))}</td></tr>`}).join("");
+    const rooms=usesPhotoArea(it)?[...new Set(it.photos.map(p=>p.room).filter(Boolean))]:[];
+    return `<tr><td><b>${esc(svcLabel(it.svc))}</b><br><small>${svcOf(it.svc).u==="job"?"Fixed price":`${qtyText(it)} · ${COND[it.cond]} condition${it.svc==="Builders clean"&&volFactor()<1?" · large-area rate":""}`}${nums.length?` · Photos ${nums.join(", ")}`:""}</small>${rooms.length?`<br><small>Areas: ${esc(rooms.join(", "))}</small>`:""}${it.notes?`<br><small>${esc(it.notes)}</small>`:""}</td><td>${money(lineCost(it))}</td></tr>`}).join("");
   const tot=[["Services",c.job]];
   if(c.after)tot.push(["After-hours / weekend",c.after]);
   if(c.travel)tot.push(["Travel",c.travel]);
@@ -972,7 +1168,7 @@ function quoteText(){
   L.push(`RAPID PRO CLEAN — QUOTE ${S.q.no}`,`Date: ${fmtDate(S.q.date)}   Valid until: ${validUntil()}`);
   if(S.q.client)L.push(`Client: ${S.q.client}`);if(S.q.site)L.push(`Site: ${S.q.site}`);
   L.push("","SCOPE OF WORK");
-  S.items.filter(isPriced).forEach(it=>{L.push(`- ${svcLabel(it.svc)}: ${svcOf(it.svc).u==="job"?"fixed price":`${qtyText(it)}, ${COND[it.cond]} condition`} — ${money(lineCost(it))}`);if(it.notes)L.push(`  ${it.notes}`)});
+  S.items.filter(isPriced).forEach(it=>{L.push(`- ${svcLabel(it.svc)}: ${svcOf(it.svc).u==="job"?"fixed price":`${qtyText(it)}, ${COND[it.cond]} condition`} — ${money(lineCost(it))}`);const rooms=usesPhotoArea(it)?[...new Set(it.photos.map(p=>p.room).filter(Boolean))]:[];if(rooms.length)L.push(`  Areas: ${rooms.join(", ")}`);if(it.notes)L.push(`  ${it.notes}`)});
   L.push("");
   if(c.after)L.push(`After-hours / weekend: ${money(c.after)}`);
   if(c.travel)L.push(`Travel: ${money(c.travel)}`);
