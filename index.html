@@ -72,8 +72,11 @@ input:focus,select:focus,textarea:focus,button:focus-visible,summary:focus-visib
 .thumb button{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;cursor:pointer;font-size:14px;line-height:1}
 .thumb i{position:absolute;left:3px;bottom:2px;font:600 11px var(--body);font-style:normal;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:0 4px}
 .addphoto{width:76px;height:76px;border:1.5px dashed var(--line);border-radius:8px;display:grid;place-items:center;color:var(--accent);font-size:13px;font-weight:600;text-transform:none;letter-spacing:0;cursor:pointer;text-align:center;line-height:1.2}
-.addphoto,.upload{position:relative;overflow:hidden}
-.fileov{position:absolute!important;inset:0;width:100%!important;height:100%!important;opacity:0;cursor:pointer;padding:0!important;border:0!important;font-size:200px!important;z-index:2}
+/* Plain, visible file inputs (same as the staff portal): the most reliable on phones */
+.filebox{display:flex;flex-direction:column;gap:6px;border:1.5px dashed var(--line);border-radius:10px;padding:10px 12px;text-transform:none;letter-spacing:0;font:600 15px var(--body);color:var(--ink);background:var(--surface)}
+.filebox.solid{border-color:var(--accent);background:var(--soft)}
+.filebox input[type=file]{font:15px var(--body);padding:4px 0;border:0;background:none;width:100%;color:var(--muted)}
+.filebox input[type=file]::file-selector-button{font:600 15px var(--body);border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:9px 14px;margin-right:10px;cursor:pointer}
 .dropping{outline:3px dashed var(--accent);outline-offset:2px}
 .plist{display:flex;flex-direction:column;gap:10px}
 .prow{display:grid;grid-template-columns:76px 1fr;gap:12px;align-items:start}
@@ -233,14 +236,14 @@ details[open].card summary::after{content:"−"}
     <p class="hint" style="margin:0" id="drawHint"></p>
     <div class="dsummary" id="drawSummary" hidden></div>
     <div id="drawings" style="display:flex;flex-direction:column;gap:14px"></div>
-    <label class="btn ghost wide upload">+ Add drawing (PDF or image)<input class="fileov" type="file" accept="application/pdf,.pdf,image/*" multiple data-file="drawing" aria-label="Add drawing, PDF or image"></label>
+    <div class="filebox">Add drawing (PDF or image)<input type="file" accept="application/pdf,.pdf,image/*" multiple data-file="drawing" aria-label="Add drawing, PDF or image"></div>
   </section>
 
   <section class="card" id="scanCard">
     <div class="sec-head"><h2>Scan rooms with photos</h2><span id="scanCount"></span></div>
     <p class="hint" style="margin:0" id="scanHint"></p>
     <div id="scans" class="plist"></div>
-    <label class="btn wide upload solid">+ Take or add room photos<input class="fileov" type="file" accept="image/*" multiple data-file="scan" aria-label="Take or add room photos"></label>
+    <div class="filebox solid">Take or add room photos<input type="file" accept="image/*" multiple data-file="scan" aria-label="Take or add room photos"></div>
   </section>
 
   <section style="display:flex;flex-direction:column;gap:12px">
@@ -531,7 +534,7 @@ function itemFields(it){
 function photoHtml(it){
   const m2=svcOf(it.svc).u==="m2";
   const thumb=(p,pi)=>`<div class="thumb"><img src="${p.data}" alt="Site photo ${pi+1} for ${esc(svcLabel(it.svc))}"><i>${pi+1}</i><button data-act="del-photo" data-pi="${pi}" aria-label="Remove photo">×</button></div>`;
-  const add=`<label class="addphoto">+ Photo<input class="fileov" type="file" accept="image/*" multiple data-file="photo" data-iid="${it.id}" aria-label="Add photos for ${esc(svcLabel(it.svc))}"></label>`;
+  const add=`<div class="filebox">Add photos for this service<input type="file" accept="image/*" multiple data-file="photo" data-iid="${it.id}" aria-label="Add photos for ${esc(svcLabel(it.svc))}"></div>`;
   if(!m2)return `<div class="hint" style="margin-bottom:6px">Photos</div><div class="photos">${it.photos.map((p,pi)=>p.data?thumb(p,pi):"").join("")}${add}</div>`;
   const hint=canMeasure
     ?"Take one photo per area. Each photo is measured, and the m² from all photos are added together and priced for this service. Check each m² and correct it if it looks wrong."
@@ -715,7 +718,7 @@ async function addFiles(kind,files,iid){
   }catch(e){toast("Couldn't add that file. Try again, or use a JPG, PNG or PDF.")}
   finally{busyFiles--;if(bad)setTimeout(()=>toast(`${bad===1?"One photo":bad+" photos"} couldn't be opened. Use JPG or PNG (on iPhone: Settings › Camera › Formats › Most Compatible).`),2300)}
 }
-function bindFileInputs(){document.querySelectorAll("input[data-file]").forEach(el=>{el.onchange=()=>onFiles(el)})}
+function bindFileInputs(){document.querySelectorAll("input[data-file]").forEach(el=>{el.onchange=()=>onFiles(el);el.oninput=()=>onFiles(el)})}
 /* Desktop: drop files onto the drawings, room photos, or a service card */
 document.addEventListener("dragover",ev=>{const z=ev.target.closest&&ev.target.closest("#drawCard,#scanCard,[data-item]");if(z){ev.preventDefault();z.classList.add("dropping")}});
 document.addEventListener("dragleave",ev=>{const z=ev.target.closest&&ev.target.closest(".dropping");if(z&&!z.contains(ev.relatedTarget))z.classList.remove("dropping")});
